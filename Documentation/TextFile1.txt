@@ -1,0 +1,28 @@
+
+### Core Surfaces ###
+Background       #121016
+Surface          #1B1821
+Surface Raised   #24202C
+Surface Hover    #2E2938
+Border           #403849
+
+
+### Accents ###
+Primary          #BD93F9
+Primary Hover    #D1B0FF
+Primary Muted    #8064A2
+Secondary        #8BE9FD
+
+### Text ###
+Text Primary     #F1EFF4
+Text Secondary   #B9B4C0
+Text Disabled    #706A78
+
+### States ###
+Success          #50FA7B
+Warning          #F1FA8C
+Error            #FF6E8A
+Info             #8BE9FD
+
+
+### Framework for Logical Data Source Matching, Differencing, Fusion & Reporting ###
