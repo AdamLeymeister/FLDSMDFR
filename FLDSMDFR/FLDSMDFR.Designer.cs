@@ -30,7 +30,9 @@
         {
             this.pnlTopBar = new System.Windows.Forms.Panel();
             this.pnlSideBar = new System.Windows.Forms.Panel();
+            this.btnDashboard = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
+            this.pnlSideBar.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlTopBar
@@ -45,11 +47,28 @@
             // pnlSideBar
             // 
             this.pnlSideBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(27)))), ((int)(((byte)(24)))), ((int)(((byte)(33)))));
+            this.pnlSideBar.Controls.Add(this.btnDashboard);
             this.pnlSideBar.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlSideBar.Location = new System.Drawing.Point(0, 50);
             this.pnlSideBar.Name = "pnlSideBar";
             this.pnlSideBar.Size = new System.Drawing.Size(200, 1344);
             this.pnlSideBar.TabIndex = 1;
+            // 
+            // btnDashboard
+            // 
+            this.btnDashboard.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnDashboard.FlatAppearance.BorderSize = 0;
+            this.btnDashboard.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDashboard.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(185)))), ((int)(((byte)(180)))), ((int)(((byte)(192)))));
+            this.btnDashboard.Location = new System.Drawing.Point(0, 0);
+            this.btnDashboard.Name = "btnDashboard";
+            this.btnDashboard.Padding = new System.Windows.Forms.Padding(15, 0, 0, 0);
+            this.btnDashboard.Size = new System.Drawing.Size(200, 55);
+            this.btnDashboard.TabIndex = 0;
+            this.btnDashboard.Text = "Dashboard";
+            this.btnDashboard.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnDashboard.UseVisualStyleBackColor = true;
+            this.btnDashboard.Click += new System.EventHandler(this.btnDashboard_Click);
             // 
             // pnlMain
             // 
@@ -77,6 +96,7 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FLDSMDFR";
             this.Load += new System.EventHandler(this.FLDSMDFR_Load);
+            this.pnlSideBar.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -86,5 +106,6 @@
         private Panel pnlTopBar;
         private Panel pnlSideBar;
         private Panel pnlMain;
+        private Button btnDashboard;
     }
 }

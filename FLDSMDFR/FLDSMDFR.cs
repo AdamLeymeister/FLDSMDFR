@@ -44,4 +44,10 @@ public partial class FLDSMDFR : Form
     {
 
     }
+
+    private void btnDashboard_Click(object sender, EventArgs e)
+    {
+        btnDashboard.BackColor = DarkMode.HoverSurface;
+        btnDashboard.ForeColor = DarkMode.Primary;
+    }
 }
