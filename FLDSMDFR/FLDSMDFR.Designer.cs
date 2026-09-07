@@ -162,7 +162,6 @@
             this.lblTitle.Size = new System.Drawing.Size(1140, 45);
             this.lblTitle.TabIndex = 3;
             this.lblTitle.Text = "Framework for Logical Data Source Matching, Differencing, Fusion && Reporting";
-            this.lblTitle.Click += new System.EventHandler(this.label1_Click);
             // 
             // FLDSMDFR
             // 
@@ -180,7 +179,6 @@
             this.Name = "FLDSMDFR";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FLDSMDFR";
-            this.Load += new System.EventHandler(this.FLDSMDFR_Load);
             this.pnlTopBar.ResumeLayout(false);
             this.pnlTopBar.PerformLayout();
             this.pnlSideBar.ResumeLayout(false);

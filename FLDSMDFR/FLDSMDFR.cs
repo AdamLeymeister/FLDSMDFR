@@ -5,6 +5,10 @@ namespace FLDSMDFR;
 
 public partial class FLDSMDFR : Form
 {
+    // -------------------------------------------------------------------------
+    // Windows API
+    // -------------------------------------------------------------------------
+
     [DllImport("user32.dll")]
     private static extern bool ReleaseCapture();
 
@@ -15,20 +19,78 @@ public partial class FLDSMDFR : Form
         IntPtr wParam,
         IntPtr lParam);
 
-    private const int WM_NCLBUTTONDOWN = 0xA1;
-    private const int HT_CAPTION = 0x2;
+    // -------------------------------------------------------------------------
+    // Native Window Messages / Hit Testing
+    // -------------------------------------------------------------------------
+
+    private const int WM_NCLBUTTONDOWN = 0x00A1;
+    private const int WM_NCHITTEST = 0x0084;
+
+    private const int HT_CAPTION = 0x0002;
+
+    private const int HTCLIENT = 1;
+    private const int HTLEFT = 10;
+    private const int HTRIGHT = 11;
+    private const int HTTOP = 12;
+    private const int HTTOPLEFT = 13;
+    private const int HTTOPRIGHT = 14;
+    private const int HTBOTTOM = 15;
+    private const int HTBOTTOMLEFT = 16;
+    private const int HTBOTTOMRIGHT = 17;
+
+    // -------------------------------------------------------------------------
+    // Native Window Styles
+    // -------------------------------------------------------------------------
+
+    private const int WS_THICKFRAME = 0x00040000;
+    private const int WS_MINIMIZEBOX = 0x00020000;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
+
+    private const int ResizeBorderSize = 10;
+
+    // -------------------------------------------------------------------------
+    // Navigation
+    // -------------------------------------------------------------------------
+
+    private Button[] _navButtons = null!;
+
+    // -------------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------------
 
     public FLDSMDFR()
     {
         InitializeComponent();
 
         ConfigureForm();
-        ConfigureNavigation();
         ConfigureTopBar();
+        ConfigureNavigation();
 
         SetActiveNavButton(btnDashboard);
         ShowView(new DashboardView());
     }
+
+    // -------------------------------------------------------------------------
+    // Native Window Configuration
+    // -------------------------------------------------------------------------
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams cp = base.CreateParams;
+
+            cp.Style |= WS_THICKFRAME;
+            cp.Style |= WS_MINIMIZEBOX;
+            cp.Style |= WS_MAXIMIZEBOX;
+
+            return cp;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Form Configuration
+    // -------------------------------------------------------------------------
 
     private void ConfigureForm()
     {
@@ -40,7 +102,102 @@ public partial class FLDSMDFR : Form
         pnlMain.BackColor = DarkMode.Background;
         pnlSideBar.BackColor = DarkMode.Surface;
         pnlTopBar.BackColor = DarkMode.Surface;
+
+        MinimumSize = new Size(900, 600);
+
+        SetStyle(
+            ControlStyles.ResizeRedraw,
+            true);
     }
+
+    // -------------------------------------------------------------------------
+    // Custom Resize Hit Testing
+    // -------------------------------------------------------------------------
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_NCHITTEST &&
+            WindowState != FormWindowState.Maximized)
+        {
+            base.WndProc(ref m);
+
+            Point mousePosition = PointToClient(Cursor.Position);
+
+            bool left =
+                mousePosition.X >= 0 &&
+                mousePosition.X <= ResizeBorderSize;
+
+            bool right =
+                mousePosition.X <= ClientSize.Width &&
+                mousePosition.X >= ClientSize.Width - ResizeBorderSize;
+
+            bool top =
+                mousePosition.Y >= 0 &&
+                mousePosition.Y <= ResizeBorderSize;
+
+            bool bottom =
+                mousePosition.Y <= ClientSize.Height &&
+                mousePosition.Y >= ClientSize.Height - ResizeBorderSize;
+
+            // Corners first.
+            if (left && top)
+            {
+                m.Result = (IntPtr)HTTOPLEFT;
+                return;
+            }
+
+            if (right && top)
+            {
+                m.Result = (IntPtr)HTTOPRIGHT;
+                return;
+            }
+
+            if (left && bottom)
+            {
+                m.Result = (IntPtr)HTBOTTOMLEFT;
+                return;
+            }
+
+            if (right && bottom)
+            {
+                m.Result = (IntPtr)HTBOTTOMRIGHT;
+                return;
+            }
+
+            // Individual edges.
+            if (left)
+            {
+                m.Result = (IntPtr)HTLEFT;
+                return;
+            }
+
+            if (right)
+            {
+                m.Result = (IntPtr)HTRIGHT;
+                return;
+            }
+
+            if (top)
+            {
+                m.Result = (IntPtr)HTTOP;
+                return;
+            }
+
+            if (bottom)
+            {
+                m.Result = (IntPtr)HTBOTTOM;
+                return;
+            }
+
+            return;
+        }
+
+        base.WndProc(ref m);
+    }
+
+    // -------------------------------------------------------------------------
+    // Top Bar
+    // -------------------------------------------------------------------------
 
     private void ConfigureTopBar()
     {
@@ -48,41 +205,89 @@ public partial class FLDSMDFR : Form
         pnlTopBar.Dock = DockStyle.Top;
         pnlTopBar.BackColor = DarkMode.Surface;
 
-        lblTitle.Text = "FLDSMDFR";
-        lblTitle.ForeColor = DarkMode.TextPrimary;
-        lblTitle.BackColor = Color.Transparent;
-        lblTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+        ConfigureTitle();
 
         ConfigureWindowButton(btnMinimize);
         ConfigureWindowButton(btnMaximize);
         ConfigureWindowButton(btnClose);
 
-        btnClose.FlatAppearance.MouseOverBackColor = DarkMode.Error;
-        btnClose.FlatAppearance.MouseDownBackColor = DarkMode.Error;
+        btnMinimize.Text = "—";
+        btnMaximize.Text = "□";
+        btnClose.Text = "×";
 
+        // Destructive close hover.
+        btnClose.FlatAppearance.MouseOverBackColor =
+            DarkMode.Error;
+
+        btnClose.FlatAppearance.MouseDownBackColor =
+            DarkMode.Error;
+
+        // Wire window control events.
+        btnMinimize.Click += btnMinimize_Click;
+        btnMaximize.Click += btnMaximize_Click;
+        btnClose.Click += btnClose_Click;
+
+        // Allow dragging from the top bar/title.
         pnlTopBar.MouseDown += TopBar_MouseDown;
         lblTitle.MouseDown += TopBar_MouseDown;
+
+        // Double-click title bar to maximize/restore.
+        pnlTopBar.DoubleClick += TopBar_DoubleClick;
+        lblTitle.DoubleClick += TopBar_DoubleClick;
+    }
+
+    private void ConfigureTitle()
+    {
+        lblTitle.Text = "FLDSMDFR";
+
+        lblTitle.ForeColor = DarkMode.TextPrimary;
+        lblTitle.BackColor = Color.Transparent;
+
+        lblTitle.Font = new Font(
+            "Segoe UI",
+            10f,
+            FontStyle.Bold);
     }
 
     private void ConfigureWindowButton(Button button)
     {
         button.FlatStyle = FlatStyle.Flat;
+
         button.FlatAppearance.BorderSize = 0;
 
+        button.FlatAppearance.MouseOverBackColor =
+            DarkMode.HoverSurface;
+
+        button.FlatAppearance.MouseDownBackColor =
+            DarkMode.ElevatedSurface;
+
         button.BackColor = DarkMode.Surface;
-        button.ForeColor = DarkMode.TextPrimary;
+        button.ForeColor = DarkMode.TextSecondary;
 
-        button.FlatAppearance.MouseOverBackColor = DarkMode.HoverSurface;
-        button.FlatAppearance.MouseDownBackColor = DarkMode.ElevatedSurface;
+        button.Font = new Font(
+            "Segoe UI",
+            10f,
+            FontStyle.Regular);
 
-        button.Dock = DockStyle.Right;
         button.Width = 46;
+        button.Height = 42;
+
+        button.Margin = Padding.Empty;
+        button.Padding = Padding.Empty;
 
         button.TabStop = false;
         button.Cursor = Cursors.Hand;
+
+        button.UseVisualStyleBackColor = false;
     }
 
-    private void TopBar_MouseDown(object? sender, MouseEventArgs e)
+    // -------------------------------------------------------------------------
+    // Top Bar Movement
+    // -------------------------------------------------------------------------
+
+    private void TopBar_MouseDown(
+        object? sender,
+        MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left)
             return;
@@ -96,12 +301,39 @@ public partial class FLDSMDFR : Form
             IntPtr.Zero);
     }
 
-    private void btnMinimize_Click(object sender, EventArgs e)
+    private void TopBar_DoubleClick(
+        object? sender,
+        EventArgs e)
+    {
+        ToggleMaximize();
+    }
+
+    // -------------------------------------------------------------------------
+    // Window Buttons
+    // -------------------------------------------------------------------------
+
+    private void btnMinimize_Click(
+        object? sender,
+        EventArgs e)
     {
         WindowState = FormWindowState.Minimized;
     }
 
-    private void btnMaximize_Click(object sender, EventArgs e)
+    private void btnMaximize_Click(
+        object? sender,
+        EventArgs e)
+    {
+        ToggleMaximize();
+    }
+
+    private void btnClose_Click(
+        object? sender,
+        EventArgs e)
+    {
+        Close();
+    }
+
+    private void ToggleMaximize()
     {
         if (WindowState == FormWindowState.Maximized)
         {
@@ -115,42 +347,49 @@ public partial class FLDSMDFR : Form
         }
     }
 
-    private void btnClose_Click(object sender, EventArgs e)
-    {
-        Close();
-    }
+    // -------------------------------------------------------------------------
+    // Navigation
+    // -------------------------------------------------------------------------
 
     private void ConfigureNavigation()
     {
-        ConfigureNavButton(btnDashboard);
-        ConfigureNavButton(btnImport);
-        ConfigureNavButton(btnUtilities);
-    }
-
-    private void ConfigureNavButton(Button button)
-    {
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = 0;
-
-        button.FlatAppearance.MouseOverBackColor = DarkMode.HoverSurface;
-        button.FlatAppearance.MouseDownBackColor = DarkMode.ElevatedSurface;
-
-        button.BackColor = DarkMode.Surface;
-        button.ForeColor = DarkMode.TextSecondary;
-
-        button.Cursor = Cursors.Hand;
-    }
-
-    private void SetActiveNavButton(Button activeButton)
-    {
-        Button[] navButtons =
+        _navButtons = new Button[]
         {
             btnDashboard,
             btnImport,
             btnUtilities
         };
 
-        foreach (Button button in navButtons)
+        foreach (Button button in _navButtons)
+        {
+            ConfigureNavButton(button);
+        }
+    }
+
+    private void ConfigureNavButton(Button button)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+
+        button.FlatAppearance.BorderSize = 0;
+
+        button.FlatAppearance.MouseOverBackColor =
+            DarkMode.HoverSurface;
+
+        button.FlatAppearance.MouseDownBackColor =
+            DarkMode.ElevatedSurface;
+
+        button.BackColor = DarkMode.Surface;
+        button.ForeColor = DarkMode.TextSecondary;
+
+        button.Cursor = Cursors.Hand;
+        button.TabStop = false;
+
+        button.UseVisualStyleBackColor = false;
+    }
+
+    private void SetActiveNavButton(Button activeButton)
+    {
+        foreach (Button button in _navButtons)
         {
             button.BackColor = DarkMode.Surface;
             button.ForeColor = DarkMode.TextSecondary;
@@ -160,6 +399,10 @@ public partial class FLDSMDFR : Form
         activeButton.ForeColor = DarkMode.Primary;
     }
 
+    // -------------------------------------------------------------------------
+    // View Navigation
+    // -------------------------------------------------------------------------
+
     private void ShowView(UserControl view)
     {
         pnlMain.SuspendLayout();
@@ -167,36 +410,49 @@ public partial class FLDSMDFR : Form
         pnlMain.Controls.Clear();
 
         view.Dock = DockStyle.Fill;
+        view.BackColor = DarkMode.Background;
 
         pnlMain.Controls.Add(view);
 
         pnlMain.ResumeLayout();
     }
 
-    private void btnDashboard_Click(object sender, EventArgs e)
+    private void NavigateTo(
+        Button button,
+        UserControl view)
     {
-        SetActiveNavButton(btnDashboard);
-        ShowView(new DashboardView());
+        SetActiveNavButton(button);
+        ShowView(view);
     }
 
-    private void btnImport_Click(object sender, EventArgs e)
+    // -------------------------------------------------------------------------
+    // Navigation Events
+    // -------------------------------------------------------------------------
+
+    private void btnDashboard_Click(
+        object sender,
+        EventArgs e)
     {
-        SetActiveNavButton(btnImport);
-        ShowView(new ImportView());
+        NavigateTo(
+            btnDashboard,
+            new DashboardView());
     }
 
-    private void FLDSMDFR_Load(object sender, EventArgs e)
+    private void btnImport_Click(
+        object sender,
+        EventArgs e)
     {
+        NavigateTo(
+            btnImport,
+            new ImportView());
     }
 
-    private void btnUtilities_Click(object sender, EventArgs e)
+    private void btnUtilities_Click(
+        object sender,
+        EventArgs e)
     {
-        SetActiveNavButton(btnUtilities);
-        ShowView(new UtilitiesView());
-    }
-
-    private void label1_Click(object sender, EventArgs e)
-    {
-
+        NavigateTo(
+            btnUtilities,
+            new UtilitiesView());
     }
 }
