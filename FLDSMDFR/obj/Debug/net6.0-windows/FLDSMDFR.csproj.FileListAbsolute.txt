@@ -16,3 +16,5 @@ C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\FLDSMDFR.pdb
 C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\FLDSMDFR.genruntimeconfig.cache
 C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\ref\FLDSMDFR.dll
 C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\FLDSMDFR.DashboardView.resources
+C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\FLDSMDFR.ImportView.resources
+C:\repos\FLDSMDFR\FLDSMDFR\FLDSMDFR\obj\Debug\net6.0-windows\FLDSMDFR.UtilitiesView.resources

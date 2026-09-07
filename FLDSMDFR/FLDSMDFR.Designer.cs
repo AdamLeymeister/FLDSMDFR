@@ -30,6 +30,8 @@
         {
             this.pnlTopBar = new System.Windows.Forms.Panel();
             this.pnlSideBar = new System.Windows.Forms.Panel();
+            this.btnUtilities = new System.Windows.Forms.Button();
+            this.btnImport = new System.Windows.Forms.Button();
             this.btnDashboard = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
             this.pnlSideBar.SuspendLayout();
@@ -47,12 +49,46 @@
             // pnlSideBar
             // 
             this.pnlSideBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(27)))), ((int)(((byte)(24)))), ((int)(((byte)(33)))));
+            this.pnlSideBar.Controls.Add(this.btnUtilities);
+            this.pnlSideBar.Controls.Add(this.btnImport);
             this.pnlSideBar.Controls.Add(this.btnDashboard);
             this.pnlSideBar.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlSideBar.Location = new System.Drawing.Point(0, 50);
             this.pnlSideBar.Name = "pnlSideBar";
             this.pnlSideBar.Size = new System.Drawing.Size(200, 1344);
             this.pnlSideBar.TabIndex = 1;
+            // 
+            // btnUtilities
+            // 
+            this.btnUtilities.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnUtilities.FlatAppearance.BorderSize = 0;
+            this.btnUtilities.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnUtilities.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(185)))), ((int)(((byte)(180)))), ((int)(((byte)(192)))));
+            this.btnUtilities.Location = new System.Drawing.Point(0, 110);
+            this.btnUtilities.Name = "btnUtilities";
+            this.btnUtilities.Padding = new System.Windows.Forms.Padding(15, 0, 0, 0);
+            this.btnUtilities.Size = new System.Drawing.Size(200, 55);
+            this.btnUtilities.TabIndex = 2;
+            this.btnUtilities.Text = "Utilities";
+            this.btnUtilities.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnUtilities.UseVisualStyleBackColor = true;
+            this.btnUtilities.Click += new System.EventHandler(this.btnUtilities_Click);
+            // 
+            // btnImport
+            // 
+            this.btnImport.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnImport.FlatAppearance.BorderSize = 0;
+            this.btnImport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnImport.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(185)))), ((int)(((byte)(180)))), ((int)(((byte)(192)))));
+            this.btnImport.Location = new System.Drawing.Point(0, 55);
+            this.btnImport.Name = "btnImport";
+            this.btnImport.Padding = new System.Windows.Forms.Padding(15, 0, 0, 0);
+            this.btnImport.Size = new System.Drawing.Size(200, 55);
+            this.btnImport.TabIndex = 1;
+            this.btnImport.Text = "Import";
+            this.btnImport.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnImport.UseVisualStyleBackColor = true;
+            this.btnImport.Click += new System.EventHandler(this.btnImport_Click);
             // 
             // btnDashboard
             // 
@@ -107,5 +143,7 @@
         private Panel pnlSideBar;
         private Panel pnlMain;
         private Button btnDashboard;
+        private Button btnUtilities;
+        private Button btnImport;
     }
 }

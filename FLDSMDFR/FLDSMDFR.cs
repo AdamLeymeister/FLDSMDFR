@@ -8,46 +8,95 @@ public partial class FLDSMDFR : Form
     {
         InitializeComponent();
 
+        ConfigureForm();
+        ConfigureNavigation();
+
+        SetActiveNavButton(btnDashboard);
+        ShowView(new DashboardView());
+    }
+
+    private void ConfigureForm()
+    {
         BackColor = DarkMode.Background;
         ForeColor = DarkMode.TextPrimary;
 
-        // sidePanel.BackColor = AppColors.Surface;
-        // topPanel.BackColor = AppColors.Surface;
-
-        // mainPanel.BackColor = AppColors.Background;
-
-        // analyticsPanel.BackColor = AppColors.ElevatedSurface;
-        // btnRun.BackColor = AppColors.Primary;
-        // btnRun.ForeColor = AppColors.Background;
-        // btnRun.FlatStyle = FlatStyle.Flat;
-        // btnRun.FlatAppearance.BorderSize = 0;
-        // titleLabel.ForeColor = AppColors.TextPrimary;
-        // descriptionLabel.ForeColor = AppColors.TextSecondary;
-
-        ShowDashboard();
-
+        pnlMain.BackColor = DarkMode.Background;
+        pnlSideBar.BackColor = DarkMode.Surface;
+        pnlTopBar.BackColor = DarkMode.Surface;
     }
 
-    private void ShowDashboard()
+    private void ConfigureNavigation()
     {
-        pnlMain.Controls.Clear();
+        ConfigureNavButton(btnDashboard);
+        ConfigureNavButton(btnImport);
+        ConfigureNavButton(btnUtilities);
+    }
 
-        var dashboard = new DashboardView
+    private void ConfigureNavButton(Button button)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+        button.FlatAppearance.BorderSize = 0;
+
+        button.FlatAppearance.MouseOverBackColor = DarkMode.HoverSurface;
+        button.FlatAppearance.MouseDownBackColor = DarkMode.ElevatedSurface;
+
+        button.BackColor = DarkMode.Surface;
+        button.ForeColor = DarkMode.TextSecondary;
+
+        button.Cursor = Cursors.Hand;
+    }
+
+    private void SetActiveNavButton(Button activeButton)
+    {
+        Button[] navButtons =
         {
-            Dock = DockStyle.Fill
+            btnDashboard,
+            btnImport,
+            btnUtilities
         };
 
-        pnlMain.Controls.Add(dashboard);
+        foreach (Button button in navButtons)
+        {
+            button.BackColor = DarkMode.Surface;
+            button.ForeColor = DarkMode.TextSecondary;
+        }
+
+        activeButton.BackColor = DarkMode.HoverSurface;
+        activeButton.ForeColor = DarkMode.Primary;
     }
 
-    private void FLDSMDFR_Load(object sender, EventArgs e)
+    private void ShowView(UserControl view)
     {
+        pnlMain.SuspendLayout();
 
+        pnlMain.Controls.Clear();
+
+        view.Dock = DockStyle.Fill;
+
+        pnlMain.Controls.Add(view);
+
+        pnlMain.ResumeLayout();
     }
 
     private void btnDashboard_Click(object sender, EventArgs e)
     {
-        btnDashboard.BackColor = DarkMode.HoverSurface;
-        btnDashboard.ForeColor = DarkMode.Primary;
+        SetActiveNavButton(btnDashboard);
+        ShowView(new DashboardView());
+    }
+
+    private void btnImport_Click(object sender, EventArgs e)
+    {
+        SetActiveNavButton(btnImport);
+        ShowView(new ImportView());
+    }
+
+    private void FLDSMDFR_Load(object sender, EventArgs e)
+    {
+    }
+
+    private void btnUtilities_Click(object sender, EventArgs e)
+    {
+        SetActiveNavButton(btnUtilities);
+        ShowView(new UtilitiesView());
     }
 }
