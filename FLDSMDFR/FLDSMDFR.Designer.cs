@@ -34,12 +34,21 @@
             this.btnImport = new System.Windows.Forms.Button();
             this.btnDashboard = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
+            this.btnClose = new System.Windows.Forms.Button();
+            this.btnMaximize = new System.Windows.Forms.Button();
+            this.btnMinimize = new System.Windows.Forms.Button();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.pnlTopBar.SuspendLayout();
             this.pnlSideBar.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlTopBar
             // 
             this.pnlTopBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(27)))), ((int)(((byte)(24)))), ((int)(((byte)(33)))));
+            this.pnlTopBar.Controls.Add(this.lblTitle);
+            this.pnlTopBar.Controls.Add(this.btnMinimize);
+            this.pnlTopBar.Controls.Add(this.btnMaximize);
+            this.pnlTopBar.Controls.Add(this.btnClose);
             this.pnlTopBar.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlTopBar.Location = new System.Drawing.Point(0, 0);
             this.pnlTopBar.Name = "pnlTopBar";
@@ -115,6 +124,46 @@
             this.pnlMain.Size = new System.Drawing.Size(2932, 1344);
             this.pnlMain.TabIndex = 2;
             // 
+            // btnClose
+            // 
+            this.btnClose.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnClose.Location = new System.Drawing.Point(3020, 0);
+            this.btnClose.Name = "btnClose";
+            this.btnClose.Size = new System.Drawing.Size(112, 50);
+            this.btnClose.TabIndex = 0;
+            this.btnClose.Text = "✕";
+            this.btnClose.UseVisualStyleBackColor = true;
+            // 
+            // btnMaximize
+            // 
+            this.btnMaximize.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnMaximize.Location = new System.Drawing.Point(2908, 0);
+            this.btnMaximize.Name = "btnMaximize";
+            this.btnMaximize.Size = new System.Drawing.Size(112, 50);
+            this.btnMaximize.TabIndex = 1;
+            this.btnMaximize.Text = "□";
+            this.btnMaximize.UseVisualStyleBackColor = true;
+            // 
+            // btnMinimize
+            // 
+            this.btnMinimize.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnMinimize.Location = new System.Drawing.Point(2796, 0);
+            this.btnMinimize.Name = "btnMinimize";
+            this.btnMinimize.Size = new System.Drawing.Size(112, 50);
+            this.btnMinimize.TabIndex = 2;
+            this.btnMinimize.Text = "—";
+            this.btnMinimize.UseVisualStyleBackColor = true;
+            // 
+            // lblTitle
+            // 
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Location = new System.Drawing.Point(12, 3);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(1140, 45);
+            this.lblTitle.TabIndex = 3;
+            this.lblTitle.Text = "Framework for Logical Data Source Matching, Differencing, Fusion && Reporting";
+            this.lblTitle.Click += new System.EventHandler(this.label1_Click);
+            // 
             // FLDSMDFR
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(144F, 144F);
@@ -132,6 +181,8 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FLDSMDFR";
             this.Load += new System.EventHandler(this.FLDSMDFR_Load);
+            this.pnlTopBar.ResumeLayout(false);
+            this.pnlTopBar.PerformLayout();
             this.pnlSideBar.ResumeLayout(false);
             this.ResumeLayout(false);
 
@@ -145,5 +196,9 @@
         private Button btnDashboard;
         private Button btnUtilities;
         private Button btnImport;
+        private Label lblTitle;
+        private Button btnMinimize;
+        private Button btnMaximize;
+        private Button btnClose;
     }
 }
