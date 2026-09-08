@@ -32,8 +32,10 @@
             this.tlpImport = new System.Windows.Forms.TableLayoutPanel();
             this.pnlCardOverview = new System.Windows.Forms.Panel();
             this.pnlCardActivity = new System.Windows.Forms.Panel();
+            this.btnImportJson = new System.Windows.Forms.Button();
             this.pnlContent.SuspendLayout();
             this.tlpImport.SuspendLayout();
+            this.pnlCardOverview.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlContent
@@ -66,6 +68,7 @@
             // pnlCardOverview
             // 
             this.pnlCardOverview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(36)))), ((int)(((byte)(32)))), ((int)(((byte)(44)))));
+            this.pnlCardOverview.Controls.Add(this.btnImportJson);
             this.pnlCardOverview.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlCardOverview.Location = new System.Drawing.Point(8, 8);
             this.pnlCardOverview.Margin = new System.Windows.Forms.Padding(8);
@@ -83,6 +86,17 @@
             this.pnlCardActivity.Size = new System.Drawing.Size(1172, 727);
             this.pnlCardActivity.TabIndex = 1;
             // 
+            // btnImportJson
+            // 
+            this.btnImportJson.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnImportJson.Location = new System.Drawing.Point(0, 0);
+            this.btnImportJson.Margin = new System.Windows.Forms.Padding(8);
+            this.btnImportJson.Name = "btnImportJson";
+            this.btnImportJson.Size = new System.Drawing.Size(115, 34);
+            this.btnImportJson.TabIndex = 0;
+            this.btnImportJson.Text = "Import";
+            this.btnImportJson.UseVisualStyleBackColor = true;
+            // 
             // ImportView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(18F, 45F);
@@ -96,6 +110,7 @@
             this.Size = new System.Drawing.Size(1359, 783);
             this.pnlContent.ResumeLayout(false);
             this.tlpImport.ResumeLayout(false);
+            this.pnlCardOverview.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -106,5 +121,6 @@
         private TableLayoutPanel tlpImport;
         private Panel pnlCardOverview;
         private Panel pnlCardActivity;
+        private Button btnImportJson;
     }
 }

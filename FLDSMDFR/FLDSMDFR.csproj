@@ -12,13 +12,15 @@
     <Compile Update="UtilitiesView.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="ImportView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Update="ImportView.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Utilties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLDSMDFR.Core\FLDSMDFR.Core.csproj" />
   </ItemGroup>
 
 </Project>

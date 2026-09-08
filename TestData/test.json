@@ -1,0 +1,38 @@
+[
+    {
+        "word": "apple",
+        "result": "PASS"
+    },
+    {
+        "word": "apple",
+        "result": "PASS"
+    },
+    {
+        "word": "apple",
+        "result": "FAIL"
+    },
+    {
+        "word": "banana",
+        "result": "PASS"
+    },
+    {
+        "word": "banana",
+        "result": "FAIL"
+    },
+    {
+        "word": "banana",
+        "result": "FAIL"
+    },
+    {
+        "word": "banana",
+        "result": "FAIL"
+    },
+    {
+        "word": "orange",
+        "result": "PASS"
+    },
+    {
+        "word": "orange",
+        "result": "PASS"
+    }
+]

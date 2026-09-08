@@ -119,6 +119,9 @@ appsettings.Local.json
 Generated/
 generated/
 
+FLDSMDFR/bin/Debug/net6.0/FLDSMDFR.dll
+FLDSMDFR.Core/bin/Debug/net6.0/FLDSMDFR.Core.dll
+
 # ------------------------------------------------------------
 # Local imported/test data
 #
