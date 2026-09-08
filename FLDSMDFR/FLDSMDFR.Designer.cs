@@ -29,15 +29,15 @@
         private void InitializeComponent()
         {
             this.pnlTopBar = new System.Windows.Forms.Panel();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.btnMinimize = new System.Windows.Forms.Button();
+            this.btnMaximize = new System.Windows.Forms.Button();
+            this.btnClose = new System.Windows.Forms.Button();
             this.pnlSideBar = new System.Windows.Forms.Panel();
             this.btnUtilities = new System.Windows.Forms.Button();
             this.btnImport = new System.Windows.Forms.Button();
             this.btnDashboard = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.btnMaximize = new System.Windows.Forms.Button();
-            this.btnMinimize = new System.Windows.Forms.Button();
-            this.lblTitle = new System.Windows.Forms.Label();
             this.pnlTopBar.SuspendLayout();
             this.pnlSideBar.SuspendLayout();
             this.SuspendLayout();
@@ -54,6 +54,45 @@
             this.pnlTopBar.Name = "pnlTopBar";
             this.pnlTopBar.Size = new System.Drawing.Size(3132, 50);
             this.pnlTopBar.TabIndex = 0;
+            // 
+            // lblTitle
+            // 
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Location = new System.Drawing.Point(12, 3);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(1140, 45);
+            this.lblTitle.TabIndex = 3;
+            this.lblTitle.Text = "Framework for Logical Data Source Matching, Differencing, Fusion && Reporting";
+            // 
+            // btnMinimize
+            // 
+            this.btnMinimize.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnMinimize.Location = new System.Drawing.Point(2796, 0);
+            this.btnMinimize.Name = "btnMinimize";
+            this.btnMinimize.Size = new System.Drawing.Size(112, 50);
+            this.btnMinimize.TabIndex = 2;
+            this.btnMinimize.Text = "—";
+            this.btnMinimize.UseVisualStyleBackColor = true;
+            // 
+            // btnMaximize
+            // 
+            this.btnMaximize.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnMaximize.Location = new System.Drawing.Point(2908, 0);
+            this.btnMaximize.Name = "btnMaximize";
+            this.btnMaximize.Size = new System.Drawing.Size(112, 50);
+            this.btnMaximize.TabIndex = 1;
+            this.btnMaximize.Text = "□";
+            this.btnMaximize.UseVisualStyleBackColor = true;
+            // 
+            // btnClose
+            // 
+            this.btnClose.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnClose.Location = new System.Drawing.Point(3020, 0);
+            this.btnClose.Name = "btnClose";
+            this.btnClose.Size = new System.Drawing.Size(112, 50);
+            this.btnClose.TabIndex = 0;
+            this.btnClose.Text = "✕";
+            this.btnClose.UseVisualStyleBackColor = true;
             // 
             // pnlSideBar
             // 
@@ -123,45 +162,6 @@
             this.pnlMain.Name = "pnlMain";
             this.pnlMain.Size = new System.Drawing.Size(2932, 1344);
             this.pnlMain.TabIndex = 2;
-            // 
-            // btnClose
-            // 
-            this.btnClose.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnClose.Location = new System.Drawing.Point(3020, 0);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(112, 50);
-            this.btnClose.TabIndex = 0;
-            this.btnClose.Text = "✕";
-            this.btnClose.UseVisualStyleBackColor = true;
-            // 
-            // btnMaximize
-            // 
-            this.btnMaximize.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnMaximize.Location = new System.Drawing.Point(2908, 0);
-            this.btnMaximize.Name = "btnMaximize";
-            this.btnMaximize.Size = new System.Drawing.Size(112, 50);
-            this.btnMaximize.TabIndex = 1;
-            this.btnMaximize.Text = "□";
-            this.btnMaximize.UseVisualStyleBackColor = true;
-            // 
-            // btnMinimize
-            // 
-            this.btnMinimize.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnMinimize.Location = new System.Drawing.Point(2796, 0);
-            this.btnMinimize.Name = "btnMinimize";
-            this.btnMinimize.Size = new System.Drawing.Size(112, 50);
-            this.btnMinimize.TabIndex = 2;
-            this.btnMinimize.Text = "—";
-            this.btnMinimize.UseVisualStyleBackColor = true;
-            // 
-            // lblTitle
-            // 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Location = new System.Drawing.Point(12, 3);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(1140, 45);
-            this.lblTitle.TabIndex = 3;
-            this.lblTitle.Text = "Framework for Logical Data Source Matching, Differencing, Fusion && Reporting";
             // 
             // FLDSMDFR
             // 
