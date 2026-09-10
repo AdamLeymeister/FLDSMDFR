@@ -375,7 +375,23 @@ namespace AnalysisReviewControl
                     ? "▼"
                     : "▶";
 
-            UpdateHeight();
+            if (!_expanded)
+            {
+                UpdateHeight();
+                Parent?.PerformLayout();
+
+                return;
+            }
+
+            BeginInvoke(
+                new Action(() =>
+                {
+                    pnlFiles.PerformLayout();
+
+                    UpdateHeight();
+
+                    Parent?.PerformLayout();
+                }));
         }
 
         private void Header_MouseEnter(
@@ -453,11 +469,15 @@ namespace AnalysisReviewControl
                 return;
             }
 
-            // A FileGroupControl expanded/collapsed.
-            //
-            // Recalculate the space required by pnlFiles
-            // and this entire SearchTermGroupControl.
-            UpdateHeight();
+            BeginInvoke(
+                new Action(() =>
+                {
+                    pnlFiles.PerformLayout();
+
+                    UpdateHeight();
+
+                    Parent?.PerformLayout();
+                }));
         }
 
         private void UpdateBulkCheckbox()
@@ -498,40 +518,44 @@ namespace AnalysisReviewControl
 
         private void UpdateHeight()
         {
-            // ------------------------------------------------------------
-            // Collapsed
-            // ------------------------------------------------------------
-
             if (!_expanded)
             {
-                pnlFiles.Height =
-                    0;
+                pnlFiles.Height = 0;
 
-                Height =
-                    HeaderHeight;
+                if (Height != HeaderHeight)
+                {
+                    Height = HeaderHeight;
+                }
 
                 return;
             }
 
-            // ------------------------------------------------------------
-            // Expanded
-            // ------------------------------------------------------------
+            pnlFiles.PerformLayout();
 
-            int childrenHeight =
-                pnlFiles.Controls
-                    .Cast<Control>()
-                    .Sum(
-                        control =>
-                            control.Height +
-                            control.Margin.Vertical);
+            int contentBottom =
+                pnlFiles.Padding.Top;
 
-            pnlFiles.Height =
-                childrenHeight +
-                pnlFiles.Padding.Vertical;
+            foreach (Control control in pnlFiles.Controls)
+            {
+                contentBottom =
+                    Math.Max(
+                        contentBottom,
+                        control.Bottom);
+            }
+
+            int filesHeight =
+                contentBottom +
+                pnlFiles.Padding.Bottom;
+
+            if (pnlFiles.Height != filesHeight)
+            {
+                pnlFiles.Height =
+                    filesHeight;
+            }
 
             int newHeight =
                 HeaderHeight +
-                pnlFiles.Height;
+                filesHeight;
 
             if (Height != newHeight)
             {

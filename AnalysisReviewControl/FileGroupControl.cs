@@ -365,7 +365,24 @@ namespace AnalysisReviewControl
                     ? "▼"
                     : "▶";
 
-            UpdateHeight();
+            if (!_expanded)
+            {
+                UpdateHeight();
+
+                Parent?.PerformLayout();
+
+                return;
+            }
+
+            BeginInvoke(
+                new Action(() =>
+                {
+                    pnlMatches.PerformLayout();
+
+                    UpdateHeight();
+
+                    Parent?.PerformLayout();
+                }));
         }
 
         private void Header_MouseEnter(
@@ -475,6 +492,8 @@ namespace AnalysisReviewControl
                 false;
         }
 
+        private const int BottomSpacing = 4;
+
         private void UpdateHeight()
         {
             int contentHeight;
@@ -484,10 +503,12 @@ namespace AnalysisReviewControl
                 pnlMatches.Height = 0;
 
                 contentHeight =
-                    pnlHeader.Height;
+                    HeaderHeight;
             }
             else
             {
+                pnlMatches.PerformLayout();
+
                 int matchesHeight =
                     pnlMatches.Controls
                         .Cast<Control>()
@@ -500,13 +521,13 @@ namespace AnalysisReviewControl
                     pnlMatches.Padding.Vertical;
 
                 contentHeight =
-                    pnlHeader.Height +
+                    HeaderHeight +
                     pnlMatches.Height;
             }
 
             int newHeight =
                 contentHeight +
-                Padding.Bottom;
+                BottomSpacing;
 
             if (Height != newHeight)
             {
