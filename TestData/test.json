@@ -1,38 +1,178 @@
-[
-    {
-        "word": "apple",
-        "result": "PASS"
-    },
-    {
-        "word": "apple",
-        "result": "PASS"
-    },
-    {
-        "word": "apple",
-        "result": "FAIL"
-    },
-    {
-        "word": "banana",
-        "result": "PASS"
-    },
-    {
-        "word": "banana",
-        "result": "FAIL"
-    },
-    {
-        "word": "banana",
-        "result": "FAIL"
-    },
-    {
-        "word": "banana",
-        "result": "FAIL"
-    },
-    {
-        "word": "orange",
-        "result": "PASS"
-    },
-    {
-        "word": "orange",
-        "result": "PASS"
-    }
-]
+{
+    "sports": [
+        {
+            "sport": "golf"
+        },
+        {
+            "sport": "tennis"
+        },
+        {
+            "sport": "baseball"
+        },
+        {
+            "sport": "football"
+        },
+        {
+            "sport": "basketball"
+        },
+        {
+            "sport": "hockey"
+        }
+    ],
+    "results": [
+        {
+            "file": "C:/users/golfers",
+            "count": 5,
+            "list": [
+                {
+                    "sport": "golf",
+                    "found": "golfer",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "tennis",
+                    "found": "tennis",
+                    "isAccurate": true
+                },
+                {
+                    "sport": "golf",
+                    "found": "go-l*fe-r_andmore",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "golf",
+                    "found": "golfer",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "baseball",
+                    "found": "baseball",
+                    "isAccurate": true
+                }
+            ]
+        },
+        {
+            "file": "C:/users/sports/data1.txt",
+            "count": 6,
+            "list": [
+                {
+                    "sport": "football",
+                    "found": "football",
+                    "isAccurate": true
+                },
+                {
+                    "sport": "football",
+                    "found": "foot-ball",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "basketball",
+                    "found": "basketball",
+                    "isAccurate": true
+                },
+                {
+                    "sport": "basketball",
+                    "found": "basket_ball",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "golf",
+                    "found": "golfer",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "tennis",
+                    "found": "tennis",
+                    "isAccurate": true
+                }
+            ]
+        },
+        {
+            "file": "C:/users/sports/data2.txt",
+            "count": 7,
+            "list": [
+                {
+                    "sport": "hockey",
+                    "found": "hockey",
+                    "isAccurate": true
+                },
+                {
+                    "sport": "hockey",
+                    "found": "h0ckey",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "hockey",
+                    "found": "h0ckey",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "baseball",
+                    "found": "base-ball",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "baseball",
+                    "found": "base-ball",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "golf",
+                    "found": "golfer",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "football",
+                    "found": "football",
+                    "isAccurate": true
+                }
+            ]
+        },
+        {
+            "file": "C:/users/archive/old_sports.txt",
+            "count": 8,
+            "list": [
+                {
+                    "sport": "golf",
+                    "found": "go-l*fe-r_andmore",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "golf",
+                    "found": "golfer",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "tennis",
+                    "found": "atennistal",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "tennis",
+                    "found": "atennistal",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "basketball",
+                    "found": "basket_ball",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "basketball",
+                    "found": "basketball",
+                    "isAccurate": true
+                },
+                {
+                    "sport": "hockey",
+                    "found": "h0ckey",
+                    "isAccurate": false
+                },
+                {
+                    "sport": "football",
+                    "found": "foot-ball",
+                    "isAccurate": false
+                }
+            ]
+        }
+    ]
+}

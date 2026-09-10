@@ -19,39 +19,28 @@ public class JsonAnalyzer
 
     public List<AnalysisTableRow> AnalyzeJson(string json)
     {
-        var records = JsonSerializer.Deserialize<List<AnalysisRecord>>(
+        var data = JsonSerializer.Deserialize<AnalysisData>(
             json,
             new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-        if (records == null)
+        if (data == null)
         {
             return new List<AnalysisTableRow>();
         }
 
-        return records
-            .Where(x =>
-                !string.IsNullOrWhiteSpace(x.Word) &&
-                !string.IsNullOrWhiteSpace(x.Result))
-            .GroupBy(x => x.Word)
-            .SelectMany(wordGroup =>
-            {
-                int totalWordOccurrences = wordGroup.Count();
-
-                return wordGroup
-                    .GroupBy(x => x.Result)
-                    .Select(resultGroup => new AnalysisTableRow
+        return data.Results
+            .SelectMany(fileResult =>
+                fileResult.List.Select(term =>
+                    new AnalysisTableRow
                     {
-                        Word = wordGroup.Key,
-                        Result = resultGroup.Key,
-                        Count = resultGroup.Count(),
-                        TotalWordOccurrences = totalWordOccurrences
-                    });
-            })
-            .OrderBy(x => x.Word)
-            .ThenByDescending(x => x.Count)
+                        File = fileResult.File,
+                        Sport = term.Sport,
+                        Found = term.Found,
+                        IsAccurate = term.IsAccurate
+                    }))
             .ToList();
     }
 }

@@ -1,13 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace FLDSMDFR.Core.Models;
 
-public class AnalysisRecord
+public class AnalysisData
 {
-    public string Word { get; set; } = string.Empty;
-    public string Result { get; set; } = string.Empty;
+    public List<Sport> Sports { get; set; } = new();
+    public List<FileResult> Results { get; set; } = new();
+}
+
+public class Sport
+{
+    [JsonPropertyName("sport")]
+    public string SportName { get; set; } = string.Empty;
+}
+
+public class FileResult
+{
+    public string File { get; set; } = string.Empty;
+
+    public int Count { get; set; }
+
+    public List<Term> List { get; set; } = new();
+}
+
+public class Term
+{
+    public string Sport { get; set; } = string.Empty;
+
+    public string Found { get; set; } = string.Empty;
+
+    public bool IsAccurate { get; set; } = false;
 }

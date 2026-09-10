@@ -8,11 +8,13 @@ namespace FLDSMDFR.Core.Models;
 
 public class AnalysisTableRow
 {
-    public string Word { get; set; } = string.Empty;
+    public string Sport { get; set; } = string.Empty;
 
-    public string Result { get; set; } = string.Empty;
+    public string Found { get; set; } = string.Empty;
+    public string File { get; set; } = string.Empty;
+    public bool IsAccurate { get; set; }
 
     public int Count { get; set; }
 
-    public int TotalWordOccurrences { get; set; }
+    public int TotalOccurrences { get; set; }
 }

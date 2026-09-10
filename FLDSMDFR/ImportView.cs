@@ -3,12 +3,15 @@ using System.Drawing;
 using System.Windows.Forms;
 
 using FLDSMDFR.Core.Services;
+using FLDSMDFR.Core.Models;
 using FLDSMDFR.Themes;
+using AnalysisReviewControl;
 
 namespace FLDSMDFR;
 
 public partial class ImportView : UserControl
 {
+    private readonly AnalysisReviewControl.AnalysisReviewControl _reviewControl;
     public ImportView()
     {
         InitializeComponent();
@@ -17,6 +20,15 @@ public partial class ImportView : UserControl
         ConfigureImportButton();
 
         btnImportJson.Click += btnImportJson_Click;
+
+        _reviewControl =
+    new AnalysisReviewControl.AnalysisReviewControl();
+
+        _reviewControl.Dock =
+            DockStyle.Fill;
+
+        pnlReview.Controls.Add(
+            _reviewControl);
     }
 
     private void ConfigureView()
@@ -55,27 +67,37 @@ public partial class ImportView : UserControl
         btnImportJson.UseVisualStyleBackColor = false;
     }
 
-    private void btnImportJson_Click(object sender, EventArgs e)
+    private void btnImportJson_Click(
+        object sender,
+        EventArgs e)
     {
-        using OpenFileDialog openFileDialog = new OpenFileDialog();
+        using OpenFileDialog openFileDialog =
+            new OpenFileDialog();
 
-        openFileDialog.Title = "Select JSON File";
-        openFileDialog.Filter = "JSON Files (*.json)|*.json";
+        openFileDialog.Title =
+            "Select JSON File";
+
+        openFileDialog.Filter =
+            "JSON Files (*.json)|*.json";
+
         openFileDialog.Multiselect = false;
 
-        if (openFileDialog.ShowDialog() != DialogResult.OK)
+        if (openFileDialog.ShowDialog()
+            != DialogResult.OK)
         {
             return;
         }
 
         try
         {
-            var analyzer = new JsonAnalyzer();
+            var analyzer =
+                new JsonAnalyzer();
 
-            var tableData = analyzer.AnalyzeFile(
-                openFileDialog.FileName);
+            var rows =
+                analyzer.AnalyzeFile(
+                    openFileDialog.FileName);
 
-            // We'll bind tableData to the table here.
+            _reviewControl.LoadData(rows);
         }
         catch (Exception ex)
         {

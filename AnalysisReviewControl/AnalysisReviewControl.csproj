@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
@@ -9,19 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Update="UtilitiesView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="ImportView.cs" />
+    <Compile Remove="UserControl1.cs" />
+    <Compile Remove="UserControl1.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Utilties\" />
+    <EmbeddedResource Remove="UserControl1.resx" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AnalysisReviewControl\AnalysisReviewControl.csproj" />
     <ProjectReference Include="..\FLDSMDFR.Core\FLDSMDFR.Core.csproj" />
+    <ProjectReference Include="..\Themes\Themes.csproj" />
   </ItemGroup>
 
 </Project>
