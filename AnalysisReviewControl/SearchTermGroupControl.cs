@@ -33,20 +33,26 @@ namespace AnalysisReviewControl
             BackColor =
                 DarkMode.Background;
 
+            AutoSize =
+                true;
+
+            AutoSizeMode =
+                AutoSizeMode.GrowAndShrink;
+
+            MinimumSize =
+                new Size(
+                    0,
+                    HeaderHeight);
+
             Margin =
-                new Padding(0, 0, 0, 6);
+                new Padding(
+                    0,
+                    0,
+                    0,
+                    6);
 
             Padding =
                 Padding.Empty;
-
-            AutoSize =
-                false;
-
-            Height =
-                HeaderHeight;
-
-            MinimumSize =
-                new Size(0, HeaderHeight);
 
             // ------------------------------------------------------------
             // Header
@@ -57,6 +63,11 @@ namespace AnalysisReviewControl
 
             pnlHeader.Height =
                 HeaderHeight;
+
+            pnlHeader.MinimumSize =
+                new Size(
+                    0,
+                    HeaderHeight);
 
             pnlHeader.BackColor =
                 DarkMode.Surface;
@@ -78,6 +89,12 @@ namespace AnalysisReviewControl
             pnlFiles.Dock =
                 DockStyle.Top;
 
+            pnlFiles.AutoSize =
+                true;
+
+            pnlFiles.AutoSizeMode =
+                AutoSizeMode.GrowAndShrink;
+
             pnlFiles.BackColor =
                 DarkMode.Background;
 
@@ -91,8 +108,17 @@ namespace AnalysisReviewControl
             pnlFiles.Visible =
                 _expanded;
 
-            pnlFiles.Height =
-                0;
+            // ------------------------------------------------------------
+            // Docking Order
+            // ------------------------------------------------------------
+
+            Controls.SetChildIndex(
+                pnlFiles,
+                0);
+
+            Controls.SetChildIndex(
+                pnlHeader,
+                1);
 
             // ------------------------------------------------------------
             // Expand Button
@@ -283,7 +309,9 @@ namespace AnalysisReviewControl
             List<AnalysisTableRow> rows)
         {
             _rows.Clear();
-            _rows.AddRange(rows);
+
+            _rows.AddRange(
+                rows);
 
             lblSearchTerm.Text =
                 searchTerm;
@@ -292,7 +320,7 @@ namespace AnalysisReviewControl
 
             UpdateBulkCheckbox();
 
-            UpdateHeight();
+            PerformLayout();
         }
 
         private void BuildFileGroups()
@@ -303,8 +331,12 @@ namespace AnalysisReviewControl
 
             var fileGroups =
                 _rows
-                    .GroupBy(row => row.File)
-                    .OrderBy(group => group.Key)
+                    .GroupBy(
+                        row =>
+                            row.File)
+                    .OrderBy(
+                        group =>
+                            group.Key)
                     .ToList();
 
             foreach (var group in fileGroups)
@@ -329,14 +361,6 @@ namespace AnalysisReviewControl
                 fileControl.AccuracyChanged +=
                     ChildAccuracyChanged;
 
-                // This is the inherited WinForms HeightChanged event.
-                //
-                // When a FileGroupControl expands/collapses,
-                // SearchTermGroupControl needs to recalculate its
-                // own height.
-                fileControl.SizeChanged +=
-                    FileControl_SizeChanged;
-
                 pnlFiles.Controls.Add(
                     fileControl);
 
@@ -345,7 +369,8 @@ namespace AnalysisReviewControl
                     0);
             }
 
-            pnlFiles.ResumeLayout();
+            pnlFiles.ResumeLayout(
+                true);
         }
 
         private void Header_Click(
@@ -375,23 +400,9 @@ namespace AnalysisReviewControl
                     ? "▼"
                     : "▶";
 
-            if (!_expanded)
-            {
-                UpdateHeight();
-                Parent?.PerformLayout();
+            PerformLayout();
 
-                return;
-            }
-
-            BeginInvoke(
-                new Action(() =>
-                {
-                    pnlFiles.PerformLayout();
-
-                    UpdateHeight();
-
-                    Parent?.PerformLayout();
-                }));
+            Parent?.PerformLayout();
         }
 
         private void Header_MouseEnter(
@@ -419,9 +430,6 @@ namespace AnalysisReviewControl
                 return;
             }
 
-            // Indeterminate represents a mixed group.
-            //
-            // It should never be applied to the children.
             if (chkBulk.CheckState ==
                 CheckState.Indeterminate)
             {
@@ -432,15 +440,12 @@ namespace AnalysisReviewControl
                 chkBulk.CheckState ==
                 CheckState.Checked;
 
-            // Update every underlying raw record.
             foreach (var row in _rows)
             {
                 row.IsAccurate =
                     isAccurate;
             }
 
-            // Tell every FileGroupControl to refresh
-            // from those underlying records.
             foreach (
                 FileGroupControl fileControl
                 in pnlFiles.Controls)
@@ -455,29 +460,7 @@ namespace AnalysisReviewControl
             object? sender,
             EventArgs e)
         {
-            // A child changed, so recalculate the
-            // Search Term tri-state checkbox.
             UpdateBulkCheckbox();
-        }
-
-        private void FileControl_SizeChanged(
-            object? sender,
-            EventArgs e)
-        {
-            if (!_expanded)
-            {
-                return;
-            }
-
-            BeginInvoke(
-                new Action(() =>
-                {
-                    pnlFiles.PerformLayout();
-
-                    UpdateHeight();
-
-                    Parent?.PerformLayout();
-                }));
         }
 
         private void UpdateBulkCheckbox()
@@ -514,54 +497,6 @@ namespace AnalysisReviewControl
 
             _updatingCheckbox =
                 false;
-        }
-
-        private void UpdateHeight()
-        {
-            if (!_expanded)
-            {
-                pnlFiles.Height = 0;
-
-                if (Height != HeaderHeight)
-                {
-                    Height = HeaderHeight;
-                }
-
-                return;
-            }
-
-            pnlFiles.PerformLayout();
-
-            int contentBottom =
-                pnlFiles.Padding.Top;
-
-            foreach (Control control in pnlFiles.Controls)
-            {
-                contentBottom =
-                    Math.Max(
-                        contentBottom,
-                        control.Bottom);
-            }
-
-            int filesHeight =
-                contentBottom +
-                pnlFiles.Padding.Bottom;
-
-            if (pnlFiles.Height != filesHeight)
-            {
-                pnlFiles.Height =
-                    filesHeight;
-            }
-
-            int newHeight =
-                HeaderHeight +
-                filesHeight;
-
-            if (Height != newHeight)
-            {
-                Height =
-                    newHeight;
-            }
         }
     }
 }

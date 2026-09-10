@@ -32,23 +32,25 @@ namespace AnalysisReviewControl
             // Main Control
             // ------------------------------------------------------------
 
-            BackColor = DarkMode.Background;
+            BackColor =
+                DarkMode.Background;
 
-            Height = HeaderHeight;
+            AutoSize =
+                true;
+
+            AutoSizeMode =
+                AutoSizeMode.GrowAndShrink;
+
+            MinimumSize =
+                new Size(
+                    0,
+                    HeaderHeight);
 
             Margin =
                 Padding.Empty;
 
             Padding =
-                new Padding(
-                    0,
-                    0,
-                    0,
-                    4);
-
-            MinimumSize = new Size(
-                0,
-                HeaderHeight);
+                Padding.Empty;
 
             // ------------------------------------------------------------
             // Header
@@ -59,6 +61,11 @@ namespace AnalysisReviewControl
 
             pnlHeader.Height =
                 HeaderHeight;
+
+            pnlHeader.MinimumSize =
+                new Size(
+                    0,
+                    HeaderHeight);
 
             pnlHeader.BackColor =
                 DarkMode.ElevatedSurface;
@@ -80,6 +87,12 @@ namespace AnalysisReviewControl
             pnlMatches.Dock =
                 DockStyle.Top;
 
+            pnlMatches.AutoSize =
+                true;
+
+            pnlMatches.AutoSizeMode =
+                AutoSizeMode.GrowAndShrink;
+
             pnlMatches.BackColor =
                 DarkMode.Background;
 
@@ -93,8 +106,17 @@ namespace AnalysisReviewControl
             pnlMatches.Visible =
                 _expanded;
 
-            pnlMatches.Height =
-                0;
+            // ------------------------------------------------------------
+            // Docking Order
+            // ------------------------------------------------------------
+
+            Controls.SetChildIndex(
+                pnlMatches,
+                0);
+
+            Controls.SetChildIndex(
+                pnlHeader,
+                1);
 
             // ------------------------------------------------------------
             // Expand Button
@@ -285,7 +307,9 @@ namespace AnalysisReviewControl
             List<AnalysisTableRow> rows)
         {
             _rows.Clear();
-            _rows.AddRange(rows);
+
+            _rows.AddRange(
+                rows);
 
             lblFile.Text =
                 file;
@@ -297,7 +321,7 @@ namespace AnalysisReviewControl
 
             UpdateBulkCheckbox();
 
-            UpdateHeight();
+            PerformLayout();
         }
 
         private void BuildMatchRows()
@@ -335,7 +359,8 @@ namespace AnalysisReviewControl
                     0);
             }
 
-            pnlMatches.ResumeLayout();
+            pnlMatches.ResumeLayout(
+                true);
         }
 
         private void Header_Click(
@@ -365,24 +390,9 @@ namespace AnalysisReviewControl
                     ? "▼"
                     : "▶";
 
-            if (!_expanded)
-            {
-                UpdateHeight();
+            PerformLayout();
 
-                Parent?.PerformLayout();
-
-                return;
-            }
-
-            BeginInvoke(
-                new Action(() =>
-                {
-                    pnlMatches.PerformLayout();
-
-                    UpdateHeight();
-
-                    Parent?.PerformLayout();
-                }));
+            Parent?.PerformLayout();
         }
 
         private void Header_MouseEnter(
@@ -490,49 +500,6 @@ namespace AnalysisReviewControl
 
             _updatingCheckbox =
                 false;
-        }
-
-        private const int BottomSpacing = 4;
-
-        private void UpdateHeight()
-        {
-            int contentHeight;
-
-            if (!_expanded)
-            {
-                pnlMatches.Height = 0;
-
-                contentHeight =
-                    HeaderHeight;
-            }
-            else
-            {
-                pnlMatches.PerformLayout();
-
-                int matchesHeight =
-                    pnlMatches.Controls
-                        .Cast<Control>()
-                        .Sum(control =>
-                            control.Height +
-                            control.Margin.Vertical);
-
-                pnlMatches.Height =
-                    matchesHeight +
-                    pnlMatches.Padding.Vertical;
-
-                contentHeight =
-                    HeaderHeight +
-                    pnlMatches.Height;
-            }
-
-            int newHeight =
-                contentHeight +
-                BottomSpacing;
-
-            if (Height != newHeight)
-            {
-                Height = newHeight;
-            }
         }
     }
 }
