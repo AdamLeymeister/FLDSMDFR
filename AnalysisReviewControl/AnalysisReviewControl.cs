@@ -3,10 +3,11 @@ using Themes;
 
 namespace AnalysisReviewControl;
 
-
-public partial class AnalysisReviewControl : UserControl
+public partial class AnalysisReviewControl : ReviewUserControl
 {
     private readonly List<AnalysisTableRow> _rows = new();
+    private readonly FlowLayoutPanel _pnlGroups = new();
+    private bool _sizingGroups;
 
     public AnalysisReviewControl()
     {
@@ -18,8 +19,17 @@ public partial class AnalysisReviewControl : UserControl
     private void ConfigureControl()
     {
         BackColor = DarkMode.Background;
+        AutoScroll = false;
 
-        AutoScroll = true;
+        _pnlGroups.Dock = DockStyle.Fill;
+        _pnlGroups.FlowDirection = FlowDirection.TopDown;
+        _pnlGroups.WrapContents = false;
+        _pnlGroups.AutoScroll = true;
+        _pnlGroups.BackColor = DarkMode.Background;
+        _pnlGroups.Padding = Padding.Empty;
+        _pnlGroups.Layout += (_, _) => SizeGroupsToWidth();
+
+        Controls.Add(_pnlGroups);
     }
 
     public void LoadData(IEnumerable<AnalysisTableRow> rows)
@@ -32,30 +42,76 @@ public partial class AnalysisReviewControl : UserControl
 
     private void BuildGroups()
     {
-        Controls.Clear();
+        SuspendLayout();
+        _pnlGroups.SuspendLayout();
 
-        var searchTermGroups = _rows
-            .GroupBy(x => x.Sport)
-            .OrderBy(x => x.Key)
+        DisposeChildren(_pnlGroups);
+
+        var sportGroups = _rows
+            .GroupBy(row => row.Sport)
+            .OrderBy(group => group.Key)
             .ToList();
 
-        foreach (var group in searchTermGroups)
+        foreach (var group in sportGroups)
         {
-            var searchTermControl =
-                new SearchTermGroupControl();
+            var sportGroupControl = new SearchTermGroupControl
+            {
+                Margin = new Padding(0, 0, 0, 6),
+                Width = Math.Max(_pnlGroups.ClientSize.Width, 1)
+            };
 
-            searchTermControl.Dock = DockStyle.Top;
-
-            searchTermControl.LoadGroup(
+            sportGroupControl.LoadGroup(
                 group.Key,
                 group.ToList());
 
-            Controls.Add(searchTermControl);
+            _pnlGroups.Controls.Add(sportGroupControl);
+        }
 
-            // DockStyle.Top stacks backwards.
-            Controls.SetChildIndex(
-                searchTermControl,
-                0);
+        _pnlGroups.ResumeLayout(true);
+        ResumeLayout(true);
+
+        SizeGroupsToWidth();
+    }
+
+    private void SizeGroupsToWidth()
+    {
+        if (_sizingGroups)
+        {
+            return;
+        }
+
+        _sizingGroups = true;
+
+        try
+        {
+            int width = Math.Max(_pnlGroups.ClientSize.Width, 1);
+
+            foreach (Control control in _pnlGroups.Controls)
+            {
+                Size minimumSize = control.MinimumSize;
+                if (minimumSize.Width != width)
+                {
+                    control.MinimumSize = new Size(width, minimumSize.Height);
+                }
+
+                Size maximumSize = control.MaximumSize;
+                if (maximumSize.Width != width)
+                {
+                    control.MaximumSize = new Size(width, 0);
+                }
+
+                if (control.Width != width)
+                {
+                    control.Width = width;
+                }
+            }
+
+            _pnlGroups.HorizontalScroll.Visible = false;
+            _pnlGroups.HorizontalScroll.Enabled = false;
+        }
+        finally
+        {
+            _sizingGroups = false;
         }
     }
 }

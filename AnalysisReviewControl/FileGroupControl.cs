@@ -8,7 +8,7 @@ using Themes;
 
 namespace AnalysisReviewControl
 {
-    public partial class FileGroupControl : UserControl
+    public partial class FileGroupControl : ReviewUserControl
     {
         private readonly List<AnalysisTableRow> _rows = new();
 
@@ -147,10 +147,9 @@ namespace AnalysisReviewControl
                 DarkMode.TextSecondary;
 
             btnExpand.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI Symbol",
-                    9f,
-                    FontStyle.Regular);
+                    9f);
 
             btnExpand.Text =
                 _expanded
@@ -169,6 +168,9 @@ namespace AnalysisReviewControl
 
             chkBulk.Dock =
                 DockStyle.Right;
+
+            chkBulk.AutoSize =
+                false;
 
             chkBulk.Width =
                 110;
@@ -189,10 +191,9 @@ namespace AnalysisReviewControl
                 DarkMode.TextSecondary;
 
             chkBulk.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
-                    9f,
-                    FontStyle.Regular);
+                    9f);
 
             chkBulk.Cursor =
                 Cursors.Hand;
@@ -204,6 +205,9 @@ namespace AnalysisReviewControl
             lblCount.Dock =
                 DockStyle.Right;
 
+            lblCount.AutoSize =
+                false;
+
             lblCount.Width =
                 180;
 
@@ -214,10 +218,9 @@ namespace AnalysisReviewControl
                 Color.Transparent;
 
             lblCount.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
-                    8.5f,
-                    FontStyle.Regular);
+                    8.5f);
 
             lblCount.TextAlign =
                 ContentAlignment.MiddleRight;
@@ -236,6 +239,9 @@ namespace AnalysisReviewControl
             lblFile.Dock =
                 DockStyle.Fill;
 
+            lblFile.AutoSize =
+                false;
+
             lblFile.ForeColor =
                 DarkMode.TextPrimary;
 
@@ -243,10 +249,9 @@ namespace AnalysisReviewControl
                 Color.Transparent;
 
             lblFile.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
-                    9f,
-                    FontStyle.Regular);
+                    9f);
 
             lblFile.TextAlign =
                 ContentAlignment.MiddleLeft;
@@ -328,7 +333,7 @@ namespace AnalysisReviewControl
         {
             pnlMatches.SuspendLayout();
 
-            pnlMatches.Controls.Clear();
+            DisposeChildren(pnlMatches);
 
             foreach (var row in _rows)
             {
@@ -415,25 +420,18 @@ namespace AnalysisReviewControl
             object? sender,
             EventArgs e)
         {
-            if (_updatingCheckbox)
+            if (!TryGetUserBulkAccuracy(
+                    chkBulk,
+                    ref _updatingCheckbox,
+                    out bool isAccurate))
             {
                 return;
             }
-
-            if (chkBulk.CheckState ==
-                CheckState.Indeterminate)
-            {
-                return;
-            }
-
-            bool value =
-                chkBulk.CheckState ==
-                CheckState.Checked;
 
             foreach (var row in _rows)
             {
                 row.IsAccurate =
-                    value;
+                    isAccurate;
             }
 
             RefreshFromData();

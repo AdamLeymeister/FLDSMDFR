@@ -6,7 +6,7 @@ using Themes;
 
 namespace AnalysisReviewControl;
 
-public partial class MatchRowControl : UserControl
+public partial class MatchRowControl : ReviewUserControl
 {
     private AnalysisTableRow? _row;
 
@@ -57,6 +57,9 @@ public partial class MatchRowControl : UserControl
         chkAccurate.Dock =
             DockStyle.Right;
 
+        chkAccurate.AutoSize =
+            false;
+
         chkAccurate.Width =
             110;
 
@@ -73,10 +76,9 @@ public partial class MatchRowControl : UserControl
             Color.Transparent;
 
         chkAccurate.Font =
-            new Font(
+            CreateOwnedFont(
                 "Segoe UI",
-                8.5f,
-                FontStyle.Regular);
+                8.5f);
 
         chkAccurate.Cursor =
             Cursors.Hand;
@@ -88,6 +90,9 @@ public partial class MatchRowControl : UserControl
         lblFound.Dock =
             DockStyle.Fill;
 
+        lblFound.AutoSize =
+            false;
+
         lblFound.ForeColor =
             DarkMode.TextPrimary;
 
@@ -95,10 +100,9 @@ public partial class MatchRowControl : UserControl
             Color.Transparent;
 
         lblFound.Font =
-            new Font(
+            CreateOwnedFont(
                 "Segoe UI",
-                8.5f,
-                FontStyle.Regular);
+                8.5f);
 
         lblFound.TextAlign =
             ContentAlignment.MiddleLeft;

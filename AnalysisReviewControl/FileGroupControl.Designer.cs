@@ -34,13 +34,11 @@
             this.lblFile = new System.Windows.Forms.Label();
             this.btnExpand = new System.Windows.Forms.Button();
             this.pnlMatches = new System.Windows.Forms.Panel();
-            this.lblSearchTerm = new System.Windows.Forms.Label();
             this.pnlHeader.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlHeader
             // 
-            this.pnlHeader.Controls.Add(this.lblSearchTerm);
             this.pnlHeader.Controls.Add(this.chkBulk);
             this.pnlHeader.Controls.Add(this.lblCount);
             this.pnlHeader.Controls.Add(this.lblFile);
@@ -96,15 +94,6 @@
             this.pnlMatches.Size = new System.Drawing.Size(876, 150);
             this.pnlMatches.TabIndex = 1;
             // 
-            // lblSearchTerm
-            // 
-            this.lblSearchTerm.AutoSize = true;
-            this.lblSearchTerm.Location = new System.Drawing.Point(343, 64);
-            this.lblSearchTerm.Name = "lblSearchTerm";
-            this.lblSearchTerm.Size = new System.Drawing.Size(59, 25);
-            this.lblSearchTerm.TabIndex = 4;
-            this.lblSearchTerm.Text = "label1";
-            // 
             // FileGroupControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
@@ -127,6 +116,5 @@
         private Label lblFile;
         private Button btnExpand;
         private Panel pnlMatches;
-        private Label lblSearchTerm;
     }
 }

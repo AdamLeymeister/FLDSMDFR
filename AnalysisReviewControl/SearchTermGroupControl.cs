@@ -8,7 +8,7 @@ using Themes;
 
 namespace AnalysisReviewControl
 {
-    public partial class SearchTermGroupControl : UserControl
+    public partial class SearchTermGroupControl : ReviewUserControl
     {
         private readonly List<AnalysisTableRow> _rows = new();
 
@@ -149,10 +149,9 @@ namespace AnalysisReviewControl
                 DarkMode.TextPrimary;
 
             btnExpand.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI Symbol",
-                    9f,
-                    FontStyle.Regular);
+                    9f);
 
             btnExpand.Text =
                 _expanded
@@ -171,6 +170,9 @@ namespace AnalysisReviewControl
 
             chkBulk.Dock =
                 DockStyle.Right;
+
+            chkBulk.AutoSize =
+                false;
 
             chkBulk.Width =
                 110;
@@ -191,10 +193,9 @@ namespace AnalysisReviewControl
                 Color.Transparent;
 
             chkBulk.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
-                    9f,
-                    FontStyle.Regular);
+                    9f);
 
             chkBulk.Cursor =
                 Cursors.Hand;
@@ -206,6 +207,9 @@ namespace AnalysisReviewControl
             lblCount.Dock =
                 DockStyle.Right;
 
+            lblCount.AutoSize =
+                false;
+
             lblCount.Width =
                 180;
 
@@ -216,10 +220,9 @@ namespace AnalysisReviewControl
                 Color.Transparent;
 
             lblCount.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
-                    8.5f,
-                    FontStyle.Regular);
+                    8.5f);
 
             lblCount.TextAlign =
                 ContentAlignment.MiddleRight;
@@ -238,6 +241,9 @@ namespace AnalysisReviewControl
             lblSearchTerm.Dock =
                 DockStyle.Fill;
 
+            lblSearchTerm.AutoSize =
+                false;
+
             lblSearchTerm.ForeColor =
                 DarkMode.Primary;
 
@@ -245,7 +251,7 @@ namespace AnalysisReviewControl
                 Color.Transparent;
 
             lblSearchTerm.Font =
-                new Font(
+                CreateOwnedFont(
                     "Segoe UI",
                     10f,
                     FontStyle.Bold);
@@ -305,7 +311,7 @@ namespace AnalysisReviewControl
         }
 
         public void LoadGroup(
-            string searchTerm,
+            string sport,
             List<AnalysisTableRow> rows)
         {
             _rows.Clear();
@@ -314,7 +320,7 @@ namespace AnalysisReviewControl
                 rows);
 
             lblSearchTerm.Text =
-                searchTerm;
+                sport;
 
             BuildFileGroups();
 
@@ -327,7 +333,7 @@ namespace AnalysisReviewControl
         {
             pnlFiles.SuspendLayout();
 
-            pnlFiles.Controls.Clear();
+            DisposeChildren(pnlFiles);
 
             var fileGroups =
                 _rows
@@ -425,20 +431,13 @@ namespace AnalysisReviewControl
             object? sender,
             EventArgs e)
         {
-            if (_updatingCheckbox)
+            if (!TryGetUserBulkAccuracy(
+                    chkBulk,
+                    ref _updatingCheckbox,
+                    out bool isAccurate))
             {
                 return;
             }
-
-            if (chkBulk.CheckState ==
-                CheckState.Indeterminate)
-            {
-                return;
-            }
-
-            bool isAccurate =
-                chkBulk.CheckState ==
-                CheckState.Checked;
 
             foreach (var row in _rows)
             {

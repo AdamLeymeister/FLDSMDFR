@@ -8,15 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="UserControl1.cs" />
-    <Compile Remove="UserControl1.Designer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Remove="UserControl1.resx" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\FLDSMDFR.Core\FLDSMDFR.Core.csproj" />
     <ProjectReference Include="..\Themes\Themes.csproj" />
   </ItemGroup>
