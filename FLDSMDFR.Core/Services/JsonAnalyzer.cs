@@ -39,7 +39,9 @@ public class JsonAnalyzer
                         File = fileResult.File,
                         Sport = term.Sport,
                         Found = term.Found,
-                        IsAccurate = term.IsAccurate
+                        Decision = term.IsAccurate
+                            ? ReviewDecision.Accurate
+                            : ReviewDecision.Pending
                     }))
             .ToList();
     }

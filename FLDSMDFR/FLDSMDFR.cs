@@ -53,6 +53,9 @@ public partial class FLDSMDFR : Form
     // -------------------------------------------------------------------------
 
     private Button[] _navButtons = null!;
+    private DashboardView? _dashboardView;
+    private ImportView? _importView;
+    private UtilitiesView? _utilitiesView;
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -67,7 +70,7 @@ public partial class FLDSMDFR : Form
         ConfigureNavigation();
 
         SetActiveNavButton(btnDashboard);
-        ShowView(new DashboardView());
+        ShowView(GetDashboardView());
     }
 
     // -------------------------------------------------------------------------
@@ -139,7 +142,6 @@ public partial class FLDSMDFR : Form
                 mousePosition.Y <= ClientSize.Height &&
                 mousePosition.Y >= ClientSize.Height - ResizeBorderSize;
 
-            // Corners first.
             if (left && top)
             {
                 m.Result = (IntPtr)HTTOPLEFT;
@@ -164,7 +166,6 @@ public partial class FLDSMDFR : Form
                 return;
             }
 
-            // Individual edges.
             if (left)
             {
                 m.Result = (IntPtr)HTLEFT;
@@ -407,12 +408,20 @@ public partial class FLDSMDFR : Form
     {
         pnlMain.SuspendLayout();
 
-        pnlMain.Controls.Clear();
+        foreach (Control existing in pnlMain.Controls)
+        {
+            existing.Visible = existing == view;
+        }
 
-        view.Dock = DockStyle.Fill;
-        view.BackColor = DarkMode.Background;
+        if (!pnlMain.Controls.Contains(view))
+        {
+            view.Dock = DockStyle.Fill;
+            view.BackColor = DarkMode.Background;
+            pnlMain.Controls.Add(view);
+        }
 
-        pnlMain.Controls.Add(view);
+        view.Visible = true;
+        view.BringToFront();
 
         pnlMain.ResumeLayout();
     }
@@ -425,6 +434,21 @@ public partial class FLDSMDFR : Form
         ShowView(view);
     }
 
+    private DashboardView GetDashboardView()
+    {
+        return _dashboardView ??= new DashboardView();
+    }
+
+    private ImportView GetImportView()
+    {
+        return _importView ??= new ImportView();
+    }
+
+    private UtilitiesView GetUtilitiesView()
+    {
+        return _utilitiesView ??= new UtilitiesView();
+    }
+
     // -------------------------------------------------------------------------
     // Navigation Events
     // -------------------------------------------------------------------------
@@ -435,7 +459,7 @@ public partial class FLDSMDFR : Form
     {
         NavigateTo(
             btnDashboard,
-            new DashboardView());
+            GetDashboardView());
     }
 
     private void btnImport_Click(
@@ -444,7 +468,7 @@ public partial class FLDSMDFR : Form
     {
         NavigateTo(
             btnImport,
-            new ImportView());
+            GetImportView());
     }
 
     private void btnUtilities_Click(
@@ -453,6 +477,6 @@ public partial class FLDSMDFR : Form
     {
         NavigateTo(
             btnUtilities,
-            new UtilitiesView());
+            GetUtilitiesView());
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FLDSMDFR.Core.Models;
+﻿namespace FLDSMDFR.Core.Models;
 
 public class AnalysisTableRow
 {
@@ -12,7 +6,14 @@ public class AnalysisTableRow
 
     public string Found { get; set; } = string.Empty;
     public string File { get; set; } = string.Empty;
-    public bool IsAccurate { get; set; }
+
+    public ReviewDecision Decision { get; set; } = ReviewDecision.Pending;
+
+    public bool IsAccurate
+    {
+        get => Decision == ReviewDecision.Accurate;
+        set => Decision = value ? ReviewDecision.Accurate : ReviewDecision.Pending;
+    }
 
     public int Count { get; set; }
 

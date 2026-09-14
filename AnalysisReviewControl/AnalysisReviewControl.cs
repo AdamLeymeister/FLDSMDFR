@@ -15,6 +15,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private const string StatusAll = "All rows";
     private const string StatusReview = "Needs review";
     private const string StatusAccurate = "Accurate";
+    private const string StatusDenied = "Denied";
 
     private const int MaxFileFilterItems = 400;
     private const int WaitCursorThreshold = 200_000;
@@ -88,7 +89,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
         StyleCombo(_cboFile, 200);
         StyleCombo(_cboStatus, 130);
 
-        _cboStatus.Items.AddRange(new object[] { StatusAll, StatusReview, StatusAccurate });
+        _cboStatus.Items.AddRange(new object[]
+        {
+            StatusAll,
+            StatusReview,
+            StatusAccurate,
+            StatusDenied
+        });
         _cboStatus.SelectedIndex = 0;
         _cboSport.Items.Add(AllSports);
         _cboSport.SelectedIndex = 0;
@@ -180,7 +187,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "Click group to expand   Y/N confirm/deny   Left/Right collapse/expand   F3 next review";
+        _lblHelp.Text = "Click group to expand   Y confirm   N deny   Space cycle status   F3 next review";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -270,8 +277,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
             ApplyFilterAndRebuild(keepCurrent: true);
         };
 
-        _btnConfirm.Click += (_, _) => ReviewSelected(accurate: true, advance: true);
-        _btnDeny.Click += (_, _) => ReviewSelected(accurate: false, advance: true);
+        _btnConfirm.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
+        _btnDeny.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Denied, advance: true);
         _btnNext.Click += (_, _) => JumpToNextReview();
         _btnCollapse.Click += (_, _) => CollapseAll();
 
@@ -295,13 +302,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
             if (keyData == (Keys.Control | Keys.Y))
             {
-                ReviewAllFiltered(accurate: true);
+                ReviewAllFiltered(ReviewDecision.Accurate);
                 return true;
             }
 
             if (keyData == (Keys.Control | Keys.N))
             {
-                ReviewAllFiltered(accurate: false);
+                ReviewAllFiltered(ReviewDecision.Denied);
                 return true;
             }
         }
@@ -345,10 +352,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
             sport.RowIndices.Add(i);
             sport.Total++;
-            if (row.IsAccurate)
-            {
-                sport.Accurate++;
-            }
+            AddDecision(sport, row.Decision, 1);
         }
 
         _sports.AddRange(sports.Values.OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase));
@@ -383,10 +387,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             }
 
             file.RowIndices.Add(rowIndex);
-            if (row.IsAccurate)
-            {
-                file.Accurate++;
-            }
+            AddDecision(file, row.Decision, 1);
         }
 
         sport.Files.AddRange(
@@ -448,6 +449,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             {
                 sport.FilteredTotal = 0;
                 sport.FilteredAccurate = 0;
+                sport.FilteredDenied = 0;
                 continue;
             }
 
@@ -455,12 +457,14 @@ public partial class AnalysisReviewControl : ReviewUserControl
             {
                 sport.FilteredTotal = sport.Total;
                 sport.FilteredAccurate = sport.Accurate;
+                sport.FilteredDenied = sport.Denied;
                 if (sport.FilesBuilt)
                 {
                     foreach (FileNode file in sport.Files)
                     {
                         file.FilteredTotal = file.RowIndices.Count;
                         file.FilteredAccurate = file.Accurate;
+                        file.FilteredDenied = file.Denied;
                     }
                 }
 
@@ -485,11 +489,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
             {
                 file.FilteredTotal = file.RowIndices.Count;
                 file.FilteredAccurate = file.Accurate;
+                file.FilteredDenied = file.Denied;
                 continue;
             }
 
             int total = 0;
             int accurate = 0;
+            int denied = 0;
             foreach (int rowIndex in file.RowIndices)
             {
                 if (!MatchesRow(_rows[rowIndex], fileFilter, status))
@@ -498,14 +504,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 }
 
                 total++;
-                if (_rows[rowIndex].IsAccurate)
-                {
-                    accurate++;
-                }
+                CountDecision(_rows[rowIndex].Decision, ref accurate, ref denied);
             }
 
             file.FilteredTotal = total;
             file.FilteredAccurate = accurate;
+            file.FilteredDenied = denied;
         }
     }
 
@@ -513,6 +517,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     {
         int total = 0;
         int accurate = 0;
+        int denied = 0;
 
         foreach (int rowIndex in sport.RowIndices)
         {
@@ -523,14 +528,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
             }
 
             total++;
-            if (row.IsAccurate)
-            {
-                accurate++;
-            }
+            CountDecision(row.Decision, ref accurate, ref denied);
         }
 
         sport.FilteredTotal = total;
         sport.FilteredAccurate = accurate;
+        sport.FilteredDenied = denied;
 
         if (sport.FilesBuilt)
         {
@@ -540,12 +543,17 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private bool MatchesRow(AnalysisTableRow row, string? fileFilter, string status)
     {
-        if (status == StatusAccurate && !row.IsAccurate)
+        if (status == StatusAccurate && row.Decision != ReviewDecision.Accurate)
         {
             return false;
         }
 
-        if (status == StatusReview && row.IsAccurate)
+        if (status == StatusDenied && row.Decision != ReviewDecision.Denied)
+        {
+            return false;
+        }
+
+        if (status == StatusReview && row.Decision != ReviewDecision.Pending)
         {
             return false;
         }
@@ -651,16 +659,16 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private string GetStateText(OutlineRow outline)
     {
-        (int total, int accurate) = GetCounts(outline);
+        if (outline.Kind == OutlineKind.Match)
+        {
+            return StateLabel(_rows[outline.RowIndex].Decision);
+        }
+
+        (int total, int accurate, int denied) = GetCounts(outline);
 
         if (total == 0)
         {
             return string.Empty;
-        }
-
-        if (accurate == 0)
-        {
-            return "Review";
         }
 
         if (accurate == total)
@@ -668,7 +676,27 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return "Accurate";
         }
 
+        if (denied == total)
+        {
+            return "Denied";
+        }
+
+        if (accurate == 0 && denied == 0)
+        {
+            return "Review";
+        }
+
         return "Mixed";
+    }
+
+    private static string StateLabel(ReviewDecision decision)
+    {
+        return decision switch
+        {
+            ReviewDecision.Accurate => "Accurate",
+            ReviewDecision.Denied => "Denied",
+            _ => "Review"
+        };
     }
 
     private string GetItemText(OutlineRow outline)
@@ -703,25 +731,29 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return string.Empty;
         }
 
-        (int total, int accurate) = GetCounts(outline);
-        return $"{total:N0} matches  ·  {accurate:N0} accurate";
+        (int total, int accurate, int denied) = GetCounts(outline);
+        return $"{total:N0} matches  ·  {accurate:N0} accurate  ·  {denied:N0} denied";
     }
 
-    private (int total, int accurate) GetCounts(OutlineRow outline)
+    private (int total, int accurate, int denied) GetCounts(OutlineRow outline)
     {
         if (outline.Kind == OutlineKind.Sport)
         {
             SportNode sport = _sports[outline.SportIndex];
-            return (sport.FilteredTotal, sport.FilteredAccurate);
+            return (sport.FilteredTotal, sport.FilteredAccurate, sport.FilteredDenied);
         }
 
         if (outline.Kind == OutlineKind.File)
         {
             FileNode file = _sports[outline.SportIndex].Files[outline.FileIndex];
-            return (file.FilteredTotal, file.FilteredAccurate);
+            return (file.FilteredTotal, file.FilteredAccurate, file.FilteredDenied);
         }
 
-        return (1, _rows[outline.RowIndex].IsAccurate ? 1 : 0);
+        ReviewDecision decision = _rows[outline.RowIndex].Decision;
+        return (
+            1,
+            decision == ReviewDecision.Accurate ? 1 : 0,
+            decision == ReviewDecision.Denied ? 1 : 0);
     }
 
     private void Grid_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
@@ -771,6 +803,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             e.CellStyle.ForeColor = state switch
             {
                 "Accurate" => DarkMode.Success,
+                "Denied" => DarkMode.Error,
                 "Review" => DarkMode.Warning,
                 "Mixed" => DarkMode.Secondary,
                 _ => DarkMode.TextSecondary
@@ -824,7 +857,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
     {
         if (e.KeyCode is Keys.Y or Keys.N && !e.Control)
         {
-            ReviewSelected(accurate: e.KeyCode == Keys.Y, advance: true);
+            ReviewSelected(
+                decision: e.KeyCode == Keys.Y
+                    ? ReviewDecision.Accurate
+                    : ReviewDecision.Denied,
+                advance: true);
             e.Handled = true;
             e.SuppressKeyPress = true;
             return;
@@ -983,7 +1020,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
     }
 
-    private void ReviewSelected(bool accurate = false, bool toggle = false, bool advance = false)
+    private void ReviewSelected(
+        ReviewDecision decision = ReviewDecision.Pending,
+        bool toggle = false,
+        bool advance = false)
     {
         List<int> selected = GetSelectedVisibleRows();
         if (selected.Count == 0)
@@ -995,7 +1035,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         foreach (int visibleIndex in selected)
         {
-            ReviewOutline(_visible[visibleIndex], accurate, toggle);
+            ReviewOutline(_visible[visibleIndex], decision, toggle);
         }
 
         RefreshFilterCounts();
@@ -1031,7 +1071,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void ReviewOutline(
         OutlineRow outline,
-        bool accurate,
+        ReviewDecision decision,
         bool toggle)
     {
         string? fileFilter = GetSelectedFile();
@@ -1039,20 +1079,25 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         if (outline.Kind == OutlineKind.Match)
         {
-            bool value = toggle ? !_rows[outline.RowIndex].IsAccurate : accurate;
-            SetRowAccuracy(outline.RowIndex, value);
+            ReviewDecision value = toggle
+                ? NextDecision(_rows[outline.RowIndex].Decision)
+                : decision;
+            SetRowDecision(outline.RowIndex, value);
             return;
         }
 
         if (outline.Kind == OutlineKind.File)
         {
             FileNode file = _sports[outline.SportIndex].Files[outline.FileIndex];
-            bool value = toggle ? file.FilteredAccurate != file.FilteredTotal : accurate;
+            ReviewDecision value = toggle
+                ? NextGroupDecision(file.FilteredTotal, file.FilteredAccurate, file.FilteredDenied)
+                : decision;
+
             foreach (int rowIndex in file.RowIndices)
             {
                 if (MatchesRow(_rows[rowIndex], fileFilter, status))
                 {
-                    SetRowAccuracy(rowIndex, value);
+                    SetRowDecision(rowIndex, value);
                 }
             }
 
@@ -1060,41 +1105,109 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         SportNode sport = _sports[outline.SportIndex];
-        bool sportValue = toggle ? sport.FilteredAccurate != sport.FilteredTotal : accurate;
+        ReviewDecision sportValue = toggle
+            ? NextGroupDecision(sport.FilteredTotal, sport.FilteredAccurate, sport.FilteredDenied)
+            : decision;
+
         foreach (int rowIndex in sport.RowIndices)
         {
             if (MatchesRow(_rows[rowIndex], fileFilter, status))
             {
-                SetRowAccuracy(rowIndex, sportValue);
+                SetRowDecision(rowIndex, sportValue);
             }
         }
     }
 
-    private void SetRowAccuracy(int rowIndex, bool accurate)
+    private static ReviewDecision NextDecision(ReviewDecision current)
+    {
+        return current switch
+        {
+            ReviewDecision.Pending => ReviewDecision.Accurate,
+            ReviewDecision.Accurate => ReviewDecision.Denied,
+            _ => ReviewDecision.Pending
+        };
+    }
+
+    private static ReviewDecision NextGroupDecision(int total, int accurate, int denied)
+    {
+        if (accurate == total && total > 0)
+        {
+            return ReviewDecision.Denied;
+        }
+
+        if (denied == total && total > 0)
+        {
+            return ReviewDecision.Pending;
+        }
+
+        return ReviewDecision.Accurate;
+    }
+
+    private void SetRowDecision(int rowIndex, ReviewDecision decision)
     {
         AnalysisTableRow row = _rows[rowIndex];
-        if (row.IsAccurate == accurate)
+        if (row.Decision == decision)
         {
             return;
         }
 
-        row.IsAccurate = accurate;
-        int delta = accurate ? 1 : -1;
+        ReviewDecision previous = row.Decision;
+        row.Decision = decision;
 
         SportNode sport = _sports[_sportIndexByRow[rowIndex]];
-        sport.Accurate += delta;
-        sport.FilteredAccurate += delta;
+        AddDecision(sport, previous, -1);
+        AddDecision(sport, decision, 1);
 
         int fileIndex = _fileIndexByRow[rowIndex];
         if (fileIndex >= 0 && fileIndex < sport.Files.Count)
         {
             FileNode file = sport.Files[fileIndex];
-            file.Accurate += delta;
-            file.FilteredAccurate += delta;
+            AddDecision(file, previous, -1);
+            AddDecision(file, decision, 1);
         }
     }
 
-    private void ReviewAllFiltered(bool accurate)
+    private static void AddDecision(SportNode sport, ReviewDecision decision, int delta)
+    {
+        if (decision == ReviewDecision.Accurate)
+        {
+            sport.Accurate += delta;
+            sport.FilteredAccurate += delta;
+        }
+        else if (decision == ReviewDecision.Denied)
+        {
+            sport.Denied += delta;
+            sport.FilteredDenied += delta;
+        }
+    }
+
+    private static void AddDecision(FileNode file, ReviewDecision decision, int delta)
+    {
+        if (decision == ReviewDecision.Accurate)
+        {
+            file.Accurate += delta;
+            file.FilteredAccurate += delta;
+        }
+        else if (decision == ReviewDecision.Denied)
+        {
+            file.Denied += delta;
+            file.FilteredDenied += delta;
+        }
+    }
+
+    private static void CountDecision(ReviewDecision decision, ref int accurate, ref int denied)
+    {
+        if (decision == ReviewDecision.Accurate)
+        {
+            accurate++;
+        }
+        else if (decision == ReviewDecision.Denied)
+        {
+            denied++;
+        }
+    }
+
+    private void ReviewAllFiltered(ReviewDecision decision)
     {
         if (_rows.Length == 0)
         {
@@ -1119,7 +1232,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 {
                     if (MatchesRow(_rows[rowIndex], fileFilter, status))
                     {
-                        SetRowAccuracy(rowIndex, accurate);
+                        SetRowDecision(rowIndex, decision);
                     }
                 }
             }
@@ -1151,7 +1264,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             foreach (int rowIndex in sport.RowIndices)
             {
                 if (!MatchesRow(_rows[rowIndex], fileFilter, status) ||
-                    _rows[rowIndex].IsAccurate)
+                    _rows[rowIndex].Decision != ReviewDecision.Pending)
                 {
                     continue;
                 }
@@ -1311,20 +1424,22 @@ public partial class AnalysisReviewControl : ReviewUserControl
     {
         int total = 0;
         int accurate = 0;
+        int denied = 0;
 
         foreach (SportNode sport in _sports)
         {
             total += sport.FilteredTotal;
             accurate += sport.FilteredAccurate;
+            denied += sport.FilteredDenied;
         }
 
-        int remaining = total - accurate;
+        int remaining = total - accurate - denied;
         string treeNote = _rows.Length == 0
             ? string.Empty
             : $"   ·   {_visible.Count:N0} tree rows";
 
         _lblStats.Text =
-            $"{total:N0} matches   ·   {accurate:N0} accurate   ·   {remaining:N0} to review{treeNote}";
+            $"{total:N0} matches   ·   {accurate:N0} accurate   ·   {denied:N0} denied   ·   {remaining:N0} to review{treeNote}";
     }
 
     private void RebuildSportFilter()
@@ -1523,8 +1638,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         public bool FilesBuilt { get; set; }
         public int Total { get; set; }
         public int Accurate { get; set; }
+        public int Denied { get; set; }
         public int FilteredTotal { get; set; }
         public int FilteredAccurate { get; set; }
+        public int FilteredDenied { get; set; }
         public List<int> RowIndices { get; } = new();
         public List<FileNode> Files { get; } = new();
     }
@@ -1534,8 +1651,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         public string Name { get; set; } = string.Empty;
         public bool Expanded { get; set; }
         public int Accurate { get; set; }
+        public int Denied { get; set; }
         public int FilteredTotal { get; set; }
         public int FilteredAccurate { get; set; }
+        public int FilteredDenied { get; set; }
         public List<int> RowIndices { get; } = new();
     }
 }
