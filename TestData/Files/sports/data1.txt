@@ -1,0 +1,8 @@
+Sports desk log — data1
+=======================
+football: varsity kickoff moved to 7:30.
+Typo watch: foot-ball showed up in the RSS dump.
+basketball practice is in gym 2.
+Scanner also caught basket_ball in a filename.
+A visiting golfer asked about the driving range.
+tennis courts are booked until noon.

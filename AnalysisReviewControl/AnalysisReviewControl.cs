@@ -1,4 +1,5 @@
 ﻿using FLDSMDFR.Core.Models;
+using FLDSMDFR.Core.Services;
 using Themes;
 
 namespace AnalysisReviewControl;
@@ -204,7 +205,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "Ctrl+Z undo   Y confirm   N deny   Space cycle   Ctrl+click  Shift+click  Ctrl+A";
+        _lblHelp.Text = "Click a match to open in VS Code   Ctrl+Z undo   Y confirm   N deny   Space cycle";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -884,10 +885,19 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (outline.Kind != OutlineKind.Match)
+        if (outline.Kind == OutlineKind.Match)
         {
-            ToggleExpanded(outline);
+            OpenInVsCode(_rows[outline.RowIndex]);
+            return;
         }
+
+        if (outline.Kind == OutlineKind.File && column == ColFile)
+        {
+            OpenInVsCode(_sports[outline.SportIndex].Files[outline.FileIndex].Name);
+            return;
+        }
+
+        ToggleExpanded(outline);
     }
 
     private void Grid_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
@@ -899,13 +909,66 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         string column = _grid.Columns[e.ColumnIndex].Name;
+        if (e.RowIndex >= 0 && e.RowIndex < _visible.Count)
+        {
+            OutlineRow outline = _visible[e.RowIndex];
+            if (outline.Kind == OutlineKind.Match ||
+                (outline.Kind == OutlineKind.File && column == ColFile) ||
+                column is ColState or ColSelect)
+            {
+                _grid.Cursor = Cursors.Hand;
+                return;
+            }
+        }
+
         _grid.Cursor = column is ColState or ColItem or ColSelect
             ? Cursors.Hand
             : Cursors.Default;
     }
 
+    private void OpenInVsCode(AnalysisTableRow row)
+    {
+        OpenInVsCode(row.File, row.Found);
+    }
+
+    private void OpenInVsCode(string path, string? searchText = null)
+    {
+        try
+        {
+            VsCodeLauncher.Open(path, searchText);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                ex.Message,
+                "Open in VS Code",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+    }
+
     private void Grid_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.KeyCode == Keys.Enter && !e.Control && !e.Shift)
+        {
+            OutlineRow? current = GetCurrentOutline();
+            if (current?.Kind == OutlineKind.Match)
+            {
+                OpenInVsCode(_rows[current.Value.RowIndex]);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+
+            if (current?.Kind == OutlineKind.File)
+            {
+                OpenInVsCode(_sports[current.Value.SportIndex].Files[current.Value.FileIndex].Name);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+        }
+
         if (e.KeyCode is Keys.Y or Keys.N && !e.Control)
         {
             ReviewSelected(

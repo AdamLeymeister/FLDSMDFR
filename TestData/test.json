@@ -21,7 +21,7 @@
     ],
     "results": [
         {
-            "file": "C:/users/golfers",
+            "file": "Files/golfers.txt",
             "count": 5,
             "list": [
                 {
@@ -52,7 +52,7 @@
             ]
         },
         {
-            "file": "C:/users/sports/data1.txt",
+            "file": "Files/sports/data1.txt",
             "count": 6,
             "list": [
                 {
@@ -88,7 +88,7 @@
             ]
         },
         {
-            "file": "C:/users/sports/data2.txt",
+            "file": "Files/sports/data2.txt",
             "count": 7,
             "list": [
                 {
@@ -129,7 +129,7 @@
             ]
         },
         {
-            "file": "C:/users/archive/old_sports.txt",
+            "file": "Files/archive/old_sports.txt",
             "count": 8,
             "list": [
                 {

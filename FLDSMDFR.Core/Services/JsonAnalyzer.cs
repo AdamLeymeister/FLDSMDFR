@@ -13,8 +13,31 @@ public class JsonAnalyzer
     public List<AnalysisTableRow> AnalyzeFile(string filePath)
     {
         string json = File.ReadAllText(filePath);
+        string baseDirectory = Path.GetDirectoryName(Path.GetFullPath(filePath)) ?? string.Empty;
+        List<AnalysisTableRow> rows = AnalyzeJson(json);
 
-        return AnalyzeJson(json);
+        foreach (AnalysisTableRow row in rows)
+        {
+            row.File = ResolveSourcePath(baseDirectory, row.File);
+        }
+
+        return rows;
+    }
+
+    private static string ResolveSourcePath(string baseDirectory, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return path;
+        }
+
+        string normalized = path.Replace('/', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(normalized))
+        {
+            return Path.GetFullPath(normalized);
+        }
+
+        return Path.GetFullPath(Path.Combine(baseDirectory, normalized));
     }
 
     public List<AnalysisTableRow> AnalyzeJson(string json)
