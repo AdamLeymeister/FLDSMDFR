@@ -933,18 +933,62 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void OpenInVsCode(string path, string? searchText = null)
     {
+        Form? form = FindForm();
+        bool locked = NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwLock);
         try
         {
             VsCodeLauncher.Open(path, searchText);
+            RestoreReviewFocus(form);
+            ScheduleReviewFocusRestore(form);
         }
         catch (Exception ex)
         {
+            if (locked)
+            {
+                NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwUnlock);
+            }
+
             MessageBox.Show(
                 ex.Message,
                 "Open in VS Code",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
+    }
+
+    private void RestoreReviewFocus(Form? form)
+    {
+        if (form is { IsHandleCreated: true, IsDisposed: false })
+        {
+            NativeMethods.SetForegroundWindow(form.Handle);
+            form.Activate();
+        }
+
+        if (_grid.CanFocus)
+        {
+            _grid.Focus();
+        }
+    }
+
+    private void ScheduleReviewFocusRestore(Form? form)
+    {
+        int remaining = 10;
+        var timer = new System.Windows.Forms.Timer { Interval = 50 };
+        timer.Tick += (_, _) =>
+        {
+            remaining--;
+            RestoreReviewFocus(form);
+            if (remaining > 0)
+            {
+                return;
+            }
+
+            timer.Stop();
+            timer.Dispose();
+            NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwUnlock);
+            RestoreReviewFocus(form);
+        };
+        timer.Start();
     }
 
     private void Grid_KeyDown(object? sender, KeyEventArgs e)

@@ -22,12 +22,12 @@ public static class VsCodeLauncher
         string arguments;
         if (Directory.Exists(fullPath))
         {
-            arguments = Quote(fullPath);
+            arguments = $"--reuse-window {Quote(fullPath)}";
         }
         else if (File.Exists(fullPath))
         {
             (int line, int column) = FindHit(fullPath, searchText);
-            arguments = $"-g {Quote($"{fullPath}:{line}:{column}")}";
+            arguments = $"--reuse-window -g {Quote($"{fullPath}:{line}:{column}")}";
         }
         else
         {
