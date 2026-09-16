@@ -53,6 +53,10 @@ public partial class FLDSMDFR : Form
     // -------------------------------------------------------------------------
 
     private Button[] _navButtons = null!;
+    private Button? _activeNavButton;
+    private readonly Panel _navIndicator = new();
+    private readonly Font _navFont = new("Segoe UI", 9.5f);
+    private readonly Font _navFontActive = new("Segoe UI", 9.5f, FontStyle.Bold);
     private DashboardView? _dashboardView;
     private ImportView? _importView;
     private UtilitiesView? _utilitiesView;
@@ -111,6 +115,10 @@ public partial class FLDSMDFR : Form
         SetStyle(
             ControlStyles.ResizeRedraw,
             true);
+
+        pnlTopBar.Paint += TopBar_Paint;
+        pnlSideBar.Paint += SideBar_Paint;
+        pnlSideBar.Resize += (_, _) => UpdateNavIndicator();
     }
 
     // -------------------------------------------------------------------------
@@ -248,6 +256,9 @@ public partial class FLDSMDFR : Form
             "Segoe UI",
             10f,
             FontStyle.Bold);
+
+        lblTitle.AutoSize = true;
+        lblTitle.Location = new Point(16, 12);
     }
 
     private void ConfigureWindowButton(Button button)
@@ -280,6 +291,28 @@ public partial class FLDSMDFR : Form
         button.Cursor = Cursors.Hand;
 
         button.UseVisualStyleBackColor = false;
+    }
+
+    private void TopBar_Paint(object? sender, PaintEventArgs e)
+    {
+        using var pen = new Pen(DarkMode.Border);
+        e.Graphics.DrawLine(
+            pen,
+            0,
+            pnlTopBar.Height - 1,
+            pnlTopBar.Width,
+            pnlTopBar.Height - 1);
+    }
+
+    private void SideBar_Paint(object? sender, PaintEventArgs e)
+    {
+        using var pen = new Pen(DarkMode.Border);
+        e.Graphics.DrawLine(
+            pen,
+            pnlSideBar.Width - 1,
+            0,
+            pnlSideBar.Width - 1,
+            pnlSideBar.Height);
     }
 
     // -------------------------------------------------------------------------
@@ -365,6 +398,61 @@ public partial class FLDSMDFR : Form
         {
             ConfigureNavButton(button);
         }
+
+        ConfigureSidebarBrand();
+        ConfigureNavIndicator();
+    }
+
+    private void ConfigureSidebarBrand()
+    {
+        var brand = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 76,
+            BackColor = DarkMode.Surface,
+            Padding = new Padding(18, 18, 12, 12)
+        };
+
+        var title = new Label
+        {
+            Text = "FLDSMDFR",
+            Dock = DockStyle.Top,
+            Height = 22,
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            ForeColor = DarkMode.TextPrimary,
+            BackColor = Color.Transparent
+        };
+
+        var subtitle = new Label
+        {
+            Text = "Match review",
+            Dock = DockStyle.Top,
+            Height = 18,
+            Font = new Font("Segoe UI", 8.25f),
+            ForeColor = DarkMode.TextDisabled,
+            BackColor = Color.Transparent
+        };
+
+        brand.Controls.Add(subtitle);
+        brand.Controls.Add(title);
+        brand.Paint += (_, e) =>
+        {
+            using var pen = new Pen(DarkMode.Border);
+            e.Graphics.DrawLine(pen, 16, brand.Height - 1, brand.Width - 16, brand.Height - 1);
+        };
+
+        pnlSideBar.Controls.Add(brand);
+        brand.BringToFront();
+    }
+
+    private void ConfigureNavIndicator()
+    {
+        _navIndicator.Width = 3;
+        _navIndicator.Height = 22;
+        _navIndicator.BackColor = DarkMode.Primary;
+        pnlSideBar.Controls.Add(_navIndicator);
+        _navIndicator.BringToFront();
+        UpdateNavIndicator();
     }
 
     private void ConfigureNavButton(Button button)
@@ -381,23 +469,48 @@ public partial class FLDSMDFR : Form
 
         button.BackColor = DarkMode.Surface;
         button.ForeColor = DarkMode.TextSecondary;
+        button.Font = _navFont;
+        button.Height = 48;
+        button.Padding = new Padding(22, 0, 12, 0);
+        button.TextAlign = ContentAlignment.MiddleLeft;
 
         button.Cursor = Cursors.Hand;
         button.TabStop = false;
 
         button.UseVisualStyleBackColor = false;
+        button.Resize += (_, _) => UpdateNavIndicator();
     }
 
     private void SetActiveNavButton(Button activeButton)
     {
+        _activeNavButton = activeButton;
+
         foreach (Button button in _navButtons)
         {
-            button.BackColor = DarkMode.Surface;
-            button.ForeColor = DarkMode.TextSecondary;
+            bool active = button == activeButton;
+            button.BackColor = active
+                ? DarkMode.HoverSurface
+                : DarkMode.Surface;
+            button.ForeColor = active
+                ? DarkMode.TextPrimary
+                : DarkMode.TextSecondary;
+            button.Font = active ? _navFontActive : _navFont;
         }
 
-        activeButton.BackColor = DarkMode.HoverSurface;
-        activeButton.ForeColor = DarkMode.Primary;
+        UpdateNavIndicator();
+    }
+
+    private void UpdateNavIndicator()
+    {
+        if (_activeNavButton == null)
+        {
+            return;
+        }
+
+        pnlSideBar.PerformLayout();
+        _navIndicator.Left = 8;
+        _navIndicator.Top = _activeNavButton.Top + (_activeNavButton.Height - _navIndicator.Height) / 2;
+        _navIndicator.BringToFront();
     }
 
     // -------------------------------------------------------------------------

@@ -1,102 +1,108 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-
+﻿using AnalysisReviewControl;
 using FLDSMDFR.Core.Services;
-using FLDSMDFR.Core.Models;
 using FLDSMDFR.Themes;
-using AnalysisReviewControl;
 
 namespace FLDSMDFR;
 
 public partial class ImportView : UserControl
 {
     private readonly AnalysisReviewControl.AnalysisReviewControl _reviewControl;
+
     public ImportView()
     {
         InitializeComponent();
 
         ConfigureView();
-        ConfigureImportButton();
+        ConfigureImportRail();
 
         btnImportJson.Click += btnImportJson_Click;
 
-        _reviewControl =
-    new AnalysisReviewControl.AnalysisReviewControl();
+        _reviewControl = new AnalysisReviewControl.AnalysisReviewControl
+        {
+            Dock = DockStyle.Fill
+        };
 
-        _reviewControl.Dock =
-            DockStyle.Fill;
-
-        pnlReview.Controls.Add(
-            _reviewControl);
+        pnlReview.Controls.Add(_reviewControl);
     }
 
     private void ConfigureView()
     {
-        BackColor = DarkMode.Background;
-        ForeColor = DarkMode.TextPrimary;
+        ModernUi.StylePage(this, pnlContent, tlpImport);
+
+        tlpImport.ColumnStyles[0].SizeType = SizeType.Absolute;
+        tlpImport.ColumnStyles[0].Width = 188;
+        tlpImport.ColumnStyles[1].SizeType = SizeType.Percent;
+        tlpImport.ColumnStyles[1].Width = 100;
+
+        pnlCardActivity.BackColor = DarkMode.Background;
+        pnlCardActivity.Margin = new Padding(4, 8, 8, 8);
+        pnlReview.BackColor = DarkMode.Background;
+        pnlReview.Padding = Padding.Empty;
     }
 
-    private void ConfigureImportButton()
+    private void ConfigureImportRail()
     {
-        btnImportJson.Text = "Import";
+        pnlCardOverview.BackColor = Color.Transparent;
+        pnlCardOverview.Margin = new Padding(8, 8, 4, 8);
+        pnlCardOverview.Padding = Padding.Empty;
 
-        btnImportJson.FlatStyle = FlatStyle.Flat;
-        btnImportJson.FlatAppearance.BorderSize = 0;
+        var card = new RoundedCardPanel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(16)
+        };
 
-        // Normal
-        btnImportJson.BackColor = DarkMode.Primary;
-        btnImportJson.ForeColor = DarkMode.Background;
+        btnImportJson.Parent = null;
+        btnImportJson.Dock = DockStyle.Top;
+        btnImportJson.Height = 36;
+        btnImportJson.Text = "Import JSON";
+        ModernUi.StylePrimaryButton(btnImportJson);
 
-        // Hover
-        btnImportJson.FlatAppearance.MouseOverBackColor =
-            DarkMode.PrimaryHover;
+        var hint = new Label
+        {
+            Text = "Load a JSON match export. Review stays on this tab when you leave and come back.",
+            Dock = DockStyle.Fill,
+            Font = ModernUi.BodyFont,
+            ForeColor = DarkMode.TextDisabled,
+            BackColor = Color.Transparent,
+            Padding = new Padding(0, 12, 0, 0)
+        };
 
-        // Pressed
-        btnImportJson.FlatAppearance.MouseDownBackColor =
-            DarkMode.PrimaryMuted;
+        var caption = new Label
+        {
+            Text = "SOURCE",
+            Dock = DockStyle.Top,
+            Height = 18,
+            Font = ModernUi.CaptionFont,
+            ForeColor = DarkMode.TextDisabled,
+            BackColor = Color.Transparent
+        };
 
-        btnImportJson.Font = new Font(
-            "Segoe UI",
-            10f,
-            FontStyle.Bold);
+        card.Controls.Add(hint);
+        card.Controls.Add(btnImportJson);
+        card.Controls.Add(caption);
 
-        btnImportJson.Cursor = Cursors.Hand;
-        btnImportJson.TabStop = false;
-
-        btnImportJson.UseVisualStyleBackColor = false;
+        pnlCardOverview.Controls.Add(card);
     }
 
-    private void btnImportJson_Click(
-        object sender,
-        EventArgs e)
+    private void btnImportJson_Click(object sender, EventArgs e)
     {
-        using OpenFileDialog openFileDialog =
-            new OpenFileDialog();
+        using OpenFileDialog openFileDialog = new()
+        {
+            Title = "Select JSON File",
+            Filter = "JSON Files (*.json)|*.json",
+            Multiselect = false
+        };
 
-        openFileDialog.Title =
-            "Select JSON File";
-
-        openFileDialog.Filter =
-            "JSON Files (*.json)|*.json";
-
-        openFileDialog.Multiselect = false;
-
-        if (openFileDialog.ShowDialog()
-            != DialogResult.OK)
+        if (openFileDialog.ShowDialog() != DialogResult.OK)
         {
             return;
         }
 
         try
         {
-            var analyzer =
-                new JsonAnalyzer();
-
-            var rows =
-                analyzer.AnalyzeFile(
-                    openFileDialog.FileName);
-
+            var analyzer = new JsonAnalyzer();
+            var rows = analyzer.AnalyzeFile(openFileDialog.FileName);
             _reviewControl.LoadData(rows);
         }
         catch (Exception ex)

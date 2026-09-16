@@ -36,12 +36,15 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly ComboBox _cboStatus = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
+    private readonly Button _btnUndo = new();
     private readonly Button _btnNext = new();
     private readonly Button _btnCollapse = new();
     private readonly Label _lblStats = new();
     private readonly Label _lblHelp = new();
     private readonly ReviewGrid _grid = new();
     private readonly System.Windows.Forms.Timer _searchDebounce = new();
+    private readonly Stack<List<(int RowIndex, ReviewDecision Previous)>> _undoStack = new();
+    private List<(int RowIndex, ReviewDecision Previous)>? _pendingUndo;
 
     private Font? _sportFont;
     private Font? _fileFont;
@@ -106,10 +109,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.Items.Add(AllFiles);
         _cboFile.SelectedIndex = 0;
 
-        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Primary, DarkMode.Background, 110);
+        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 110);
         StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 100);
+        StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 88);
         StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 96);
         StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 110);
+        UpdateUndoButton();
 
         flow.Controls.Add(Wrap(CreateCaption("Search"), _txtSearch));
         flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
@@ -134,7 +139,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Width = 450,
+            Width = 560,
             Height = 28,
             BackColor = DarkMode.Surface,
             Margin = Padding.Empty
@@ -142,6 +147,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         panel.Controls.Add(_btnConfirm);
         panel.Controls.Add(_btnDeny);
+        panel.Controls.Add(_btnUndo);
         panel.Controls.Add(_btnNext);
         panel.Controls.Add(_btnCollapse);
         return panel;
@@ -198,7 +204,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "Ctrl+click  Shift+click  Ctrl+A select all   Y confirm   N deny   Space cycle";
+        _lblHelp.Text = "Ctrl+Z undo   Y confirm   N deny   Space cycle   Ctrl+click  Shift+click  Ctrl+A";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -299,6 +305,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _btnConfirm.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
         _btnDeny.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Denied, advance: true);
+        _btnUndo.Click += (_, _) => UndoLast();
         _btnNext.Click += (_, _) => JumpToNextReview();
         _btnCollapse.Click += (_, _) => CollapseAll();
 
@@ -313,6 +320,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if (keyData == (Keys.Control | Keys.Z) && !_txtSearch.ContainsFocus)
+        {
+            UndoLast();
+            return true;
+        }
+
         if (_grid.Focused || _grid.ContainsFocus)
         {
             if (keyData == (Keys.Control | Keys.A))
@@ -340,10 +353,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
     public void LoadData(IEnumerable<AnalysisTableRow> rows)
     {
         _rows = rows as AnalysisTableRow[] ?? rows.ToArray();
+        _undoStack.Clear();
+        _pendingUndo = null;
         BuildSportIndex();
         RebuildSportFilter();
         RebuildFileFilter();
         ApplyFilterAndRebuild(keepCurrent: false);
+        UpdateUndoButton();
 
         if (_visible.Count > 0)
         {
@@ -899,6 +915,14 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
+        if (e.KeyCode == Keys.Z && e.Control)
+        {
+            UndoLast();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+
         if (e.KeyCode == Keys.Space && !e.Control && !e.Shift)
         {
             ReviewSelected(toggle: true, advance: false);
@@ -1065,10 +1089,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         OutlineRow first = _visible[selected[0]];
 
+        BeginUndoBatch();
         foreach (int visibleIndex in selected)
         {
             ReviewOutline(_visible[visibleIndex], decision, toggle);
         }
+        CommitUndoBatch();
 
         RefreshFilterCounts();
         RebuildVisible();
@@ -1184,6 +1210,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         ReviewDecision previous = row.Decision;
+        if (_pendingUndo != null)
+        {
+            _pendingUndo.Add((rowIndex, previous));
+        }
+
         row.Decision = decision;
 
         SportNode sport = _sports[_sportIndexByRow[rowIndex]];
@@ -1239,6 +1270,74 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
     }
 
+    private void BeginUndoBatch()
+    {
+        _pendingUndo = new List<(int RowIndex, ReviewDecision Previous)>();
+    }
+
+    private void CommitUndoBatch()
+    {
+        if (_pendingUndo != null && _pendingUndo.Count > 0)
+        {
+            _undoStack.Push(_pendingUndo);
+        }
+
+        _pendingUndo = null;
+        UpdateUndoButton();
+    }
+
+    private void UndoLast()
+    {
+        if (_undoStack.Count == 0)
+        {
+            return;
+        }
+
+        List<(int RowIndex, ReviewDecision Previous)> batch = _undoStack.Pop();
+        for (int i = batch.Count - 1; i >= 0; i--)
+        {
+            SetRowDecision(batch[i].RowIndex, batch[i].Previous);
+        }
+
+        RefreshFilterCounts();
+        RebuildVisible();
+        UpdateStats();
+        UpdateUndoButton();
+
+        int vis = FindVisibleMatch(batch[0].RowIndex);
+        if (vis < 0 && _visible.Count > 0)
+        {
+            vis = 0;
+        }
+
+        if (vis >= 0)
+        {
+            SelectVisibleRow(vis);
+            _grid.Focus();
+        }
+    }
+
+    private int FindVisibleMatch(int rowIndex)
+    {
+        for (int i = 0; i < _visible.Count; i++)
+        {
+            OutlineRow outline = _visible[i];
+            if (outline.Kind == OutlineKind.Match && outline.RowIndex == rowIndex)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void UpdateUndoButton()
+    {
+        bool enabled = _undoStack.Count > 0;
+        _btnUndo.Enabled = enabled;
+        _btnUndo.ForeColor = enabled ? DarkMode.TextPrimary : DarkMode.TextDisabled;
+    }
+
     private void ReviewAllFiltered(ReviewDecision decision)
     {
         if (_rows.Length == 0)
@@ -1250,6 +1349,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         string? fileFilter = GetSelectedFile();
         string status = _cboStatus.SelectedItem as string ?? StatusAll;
 
+        BeginUndoBatch();
         RunPossiblyExpensive(() =>
         {
             foreach (SportNode sport in _sports)
@@ -1272,6 +1372,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             RefreshFilterCounts();
             RebuildVisible();
         });
+        CommitUndoBatch();
 
         UpdateStats();
     }

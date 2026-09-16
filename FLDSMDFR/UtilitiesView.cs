@@ -1,20 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using FLDSMDFR.Themes;
 
-namespace FLDSMDFR
+namespace FLDSMDFR;
+
+public partial class UtilitiesView : UserControl
 {
-    public partial class UtilitiesView : UserControl
+    public UtilitiesView()
     {
-        public UtilitiesView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+        ConfigureView();
+    }
+
+    private void ConfigureView()
+    {
+        ModernUi.StylePage(this, pnlContent, tlpUtilities);
+
+        ModernUi.FillCard(
+            pnlCardOverview,
+            "Utilities",
+            "Maintenance tools will use the same surface, type, and spacing as Import.");
+
+        ModernUi.FillCard(
+            pnlUtilities,
+            "Workspace",
+            "Exports, cleanup, and batch helpers will appear in this card.");
     }
 }

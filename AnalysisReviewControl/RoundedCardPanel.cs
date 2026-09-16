@@ -2,9 +2,10 @@ using System.Drawing.Drawing2D;
 
 namespace AnalysisReviewControl;
 
-internal sealed class RoundedCardPanel : Panel
+public sealed class RoundedCardPanel : Panel
 {
     public int CornerRadius { get; set; } = 18;
+    public Color FillColor { get; set; } = Themes.DarkMode.Surface;
 
     public RoundedCardPanel()
     {
@@ -27,7 +28,7 @@ internal sealed class RoundedCardPanel : Panel
         bounds.Height -= 1;
 
         using GraphicsPath path = CreateRoundPath(bounds, CornerRadius);
-        using var fill = new SolidBrush(Themes.DarkMode.Surface);
+        using var fill = new SolidBrush(FillColor);
         using var border = new Pen(Themes.DarkMode.Border, 1);
 
         e.Graphics.FillPath(fill, path);
