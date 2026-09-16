@@ -5,7 +5,7 @@ namespace FLDSMDFR.Core.Services;
 
 public static class VsCodeLauncher
 {
-    public static void Open(string path, string? searchText = null)
+    public static int Open(string path, string? searchText = null)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -20,14 +20,16 @@ public static class VsCodeLauncher
         }
 
         string arguments;
+        int selectLength = 0;
         if (Directory.Exists(fullPath))
         {
             arguments = $"--reuse-window {Quote(fullPath)}";
         }
         else if (File.Exists(fullPath))
         {
-            (int line, int column) = FindHit(fullPath, searchText);
+            (int line, int column, int length) = FindHit(fullPath, searchText);
             arguments = $"--reuse-window -g {Quote($"{fullPath}:{line}:{column}")}";
+            selectLength = length;
         }
         else
         {
@@ -44,13 +46,15 @@ public static class VsCodeLauncher
             UseShellExecute = shell,
             CreateNoWindow = !shell
         });
+
+        return selectLength;
     }
 
-    private static (int Line, int Column) FindHit(string filePath, string? searchText)
+    private static (int Line, int Column, int Length) FindHit(string filePath, string? searchText)
     {
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            return (1, 1);
+            return (1, 1, 0);
         }
 
         int lineNumber = 0;
@@ -60,11 +64,11 @@ public static class VsCodeLauncher
             int index = line.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
             if (index >= 0)
             {
-                return (lineNumber, index + 1);
+                return (lineNumber, index + 1, searchText.Length);
             }
         }
 
-        return (1, 1);
+        return (1, 1, 0);
     }
 
     private static string? FindCodeExecutable()
@@ -86,8 +90,7 @@ public static class VsCodeLauncher
             }
         }
 
-        string? fromPath = FindOnPath("code.cmd") ?? FindOnPath("code.exe") ?? FindOnPath("code");
-        return fromPath;
+        return FindOnPath("code.cmd") ?? FindOnPath("code.exe") ?? FindOnPath("code");
     }
 
     private static string? FindOnPath(string fileName)

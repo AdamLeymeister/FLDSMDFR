@@ -19,6 +19,14 @@ public partial class FLDSMDFR : Form
     private static extern bool IsZoomed(IntPtr hWnd);
 
     [DllImport("dwmapi.dll")]
+    private static extern bool DwmDefWindowProc(
+        IntPtr hWnd,
+        int msg,
+        IntPtr wParam,
+        IntPtr lParam,
+        out IntPtr result);
+
+    [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd,
         int attr,
@@ -38,7 +46,6 @@ public partial class FLDSMDFR : Form
     private const int WM_NCLBUTTONDOWN = 0x00A1;
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCCALCSIZE = 0x0083;
-    private const int WM_NCPAINT = 0x0085;
     private const int WM_NCACTIVATE = 0x0086;
     private const int WM_DWMCOMPOSITIONCHANGED = 0x031E;
 
@@ -71,7 +78,7 @@ public partial class FLDSMDFR : Form
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoZOrder = 0x0004;
 
-    private const int ResizeBorderSize = 6;
+    private const int ResizeBorderSize = 10;
     private const int TitleBarHeight = 40;
     private const int WindowButtonWidth = 46;
 
@@ -140,30 +147,12 @@ public partial class FLDSMDFR : Form
         pnlSideBar.Paint += SideBar_Paint;
         pnlSideBar.Resize += (_, _) => UpdateNavIndicator();
         LocationChanged += (_, _) => UpdateMaximizedBounds();
-        Activated += (_, _) =>
-        {
-            ApplyDwmChrome();
-            Invalidate(true);
-        };
+        Activated += (_, _) => Invalidate(true);
         Deactivate += (_, _) => Invalidate(true);
     }
 
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == WM_NCACTIVATE)
-        {
-            m.LParam = new IntPtr(-1);
-            base.WndProc(ref m);
-            m.Result = (IntPtr)1;
-            return;
-        }
-
-        if (m.Msg == WM_NCPAINT)
-        {
-            m.Result = IntPtr.Zero;
-            return;
-        }
-
         if (m.Msg == WM_NCCALCSIZE)
         {
             if (m.WParam != IntPtr.Zero && IsZoomed(Handle))
@@ -184,17 +173,22 @@ public partial class FLDSMDFR : Form
             return;
         }
 
-        if (m.Msg == WM_DWMCOMPOSITIONCHANGED)
+        if (m.Msg == WM_NCACTIVATE)
         {
-            ApplyDwmChrome();
+            m.LParam = new IntPtr(-1);
+            base.WndProc(ref m);
+            m.Result = (IntPtr)1;
+            return;
         }
 
         if (m.Msg == WM_NCHITTEST &&
             WindowState != FormWindowState.Maximized)
         {
-            base.WndProc(ref m);
-
-            Point mousePosition = PointToClient(Cursor.Position);
+            long packed = m.LParam.ToInt64();
+            var screen = new Point(
+                (short)(packed & 0xFFFF),
+                (short)((packed >> 16) & 0xFFFF));
+            Point mousePosition = PointToClient(screen);
             int buttonBand = WindowButtonWidth * 3;
 
             bool left =
@@ -261,7 +255,16 @@ public partial class FLDSMDFR : Form
                 m.Result = (IntPtr)HTBOTTOM;
                 return;
             }
+        }
 
+        if (m.Msg == WM_DWMCOMPOSITIONCHANGED)
+        {
+            ApplyDwmChrome();
+        }
+
+        if (DwmDefWindowProc(m.HWnd, m.Msg, m.WParam, m.LParam, out IntPtr dwmResult))
+        {
+            m.Result = dwmResult;
             return;
         }
 

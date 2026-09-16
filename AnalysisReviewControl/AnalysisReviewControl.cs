@@ -934,20 +934,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void OpenInVsCode(string path, string? searchText = null)
     {
         Form? form = FindForm();
-        bool locked = NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwLock);
         try
         {
-            VsCodeLauncher.Open(path, searchText);
-            RestoreReviewFocus(form);
-            ScheduleReviewFocusRestore(form);
+            int selectLength = VsCodeLauncher.Open(path, searchText);
+            ScheduleHighlightThenRestore(form, selectLength);
         }
         catch (Exception ex)
         {
-            if (locked)
-            {
-                NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwUnlock);
-            }
-
             MessageBox.Show(
                 ex.Message,
                 "Open in VS Code",
@@ -970,25 +963,37 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
     }
 
-    private void ScheduleReviewFocusRestore(Form? form)
+    private void ScheduleHighlightThenRestore(Form? form, int selectLength)
     {
-        int remaining = 10;
-        var timer = new System.Windows.Forms.Timer { Interval = 50 };
-        timer.Tick += (_, _) =>
+        int attempts = 0;
+        var waitForCode = new System.Windows.Forms.Timer { Interval = 80 };
+        waitForCode.Tick += (_, _) =>
         {
-            remaining--;
-            RestoreReviewFocus(form);
-            if (remaining > 0)
+            attempts++;
+            bool ready = NativeMethods.IsVsCodeForeground();
+            if (!ready && attempts < 12)
             {
                 return;
             }
 
-            timer.Stop();
-            timer.Dispose();
-            NativeMethods.LockSetForegroundWindow(NativeMethods.LsfwUnlock);
-            RestoreReviewFocus(form);
+            waitForCode.Stop();
+            waitForCode.Dispose();
+
+            if (ready && selectLength > 0)
+            {
+                NativeMethods.SelectNextCharacters(selectLength);
+            }
+
+            var restore = new System.Windows.Forms.Timer { Interval = 120 };
+            restore.Tick += (_, _) =>
+            {
+                restore.Stop();
+                restore.Dispose();
+                RestoreReviewFocus(form);
+            };
+            restore.Start();
         };
-        timer.Start();
+        waitForCode.Start();
     }
 
     private void Grid_KeyDown(object? sender, KeyEventArgs e)
