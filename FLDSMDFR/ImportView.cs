@@ -36,20 +36,23 @@ public partial class ImportView : UserControl
 
         pnlCardActivity.BackColor = DarkMode.Background;
         pnlCardActivity.Margin = new Padding(4, 8, 8, 8);
+        pnlCardActivity.Padding = Padding.Empty;
         pnlReview.BackColor = DarkMode.Background;
         pnlReview.Padding = Padding.Empty;
     }
 
     private void ConfigureImportRail()
     {
-        pnlCardOverview.BackColor = Color.Transparent;
+        pnlCardOverview.BackColor = DarkMode.Background;
         pnlCardOverview.Margin = new Padding(8, 8, 4, 8);
         pnlCardOverview.Padding = Padding.Empty;
 
         var card = new RoundedCardPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(16)
+            Padding = new Padding(18),
+            BackdropColor = DarkMode.Background,
+            FillColor = DarkMode.Surface
         };
 
         btnImportJson.Parent = null;
@@ -62,6 +65,7 @@ public partial class ImportView : UserControl
         {
             Text = "Load a JSON match export. Review stays on this tab when you leave and come back.",
             Dock = DockStyle.Fill,
+            AutoSize = false,
             Font = ModernUi.BodyFont,
             ForeColor = DarkMode.TextDisabled,
             BackColor = Color.Transparent,

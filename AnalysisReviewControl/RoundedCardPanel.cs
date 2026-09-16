@@ -6,6 +6,7 @@ public sealed class RoundedCardPanel : Panel
 {
     public int CornerRadius { get; set; } = 18;
     public Color FillColor { get; set; } = Themes.DarkMode.Surface;
+    public Color BackdropColor { get; set; } = Themes.DarkMode.Background;
 
     public RoundedCardPanel()
     {
@@ -19,9 +20,15 @@ public sealed class RoundedCardPanel : Panel
         BackColor = Color.Transparent;
     }
 
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        PaintBackdrop(e.Graphics);
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        PaintBackdrop(e.Graphics);
 
         Rectangle bounds = ClientRectangle;
         bounds.Width -= 1;
@@ -33,6 +40,12 @@ public sealed class RoundedCardPanel : Panel
 
         e.Graphics.FillPath(fill, path);
         e.Graphics.DrawPath(border, path);
+    }
+
+    private void PaintBackdrop(Graphics graphics)
+    {
+        using var backdrop = new SolidBrush(BackdropColor);
+        graphics.FillRectangle(backdrop, ClientRectangle);
     }
 
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)

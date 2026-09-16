@@ -59,6 +59,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void ConfigureControl()
     {
+        AutoScaleMode = AutoScaleMode.None;
         BackColor = DarkMode.Background;
         Padding = new Padding(4);
         Font = CreateOwnedFont("Segoe UI", 9.5f);
@@ -237,8 +238,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureCard()
     {
         _card.Dock = DockStyle.Fill;
-        _card.Padding = new Padding(10, 6, 10, 10);
-        _card.BackColor = DarkMode.Surface;
+        _card.Padding = new Padding(18);
+        _card.BackColor = Color.Transparent;
+        _card.BackdropColor = DarkMode.Background;
+        _card.FillColor = DarkMode.Surface;
 
         _card.Controls.Add(_grid);
         _card.Controls.Add(_pnlToolbar);

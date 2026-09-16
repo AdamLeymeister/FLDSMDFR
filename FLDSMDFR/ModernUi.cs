@@ -13,6 +13,11 @@ internal static class ModernUi
 
     public static void StylePage(Control view, Panel content, TableLayoutPanel table)
     {
+        if (view is ContainerControl container)
+        {
+            container.AutoScaleMode = AutoScaleMode.None;
+        }
+
         view.BackColor = DarkMode.Background;
         view.ForeColor = DarkMode.TextPrimary;
         view.Font = UiFont;
@@ -28,51 +33,54 @@ internal static class ModernUi
         string? metric = null,
         Color? metricColor = null)
     {
-        host.BackColor = Color.Transparent;
+        host.BackColor = DarkMode.Background;
         host.Padding = Padding.Empty;
 
         var card = new RoundedCardPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(20)
+            Padding = new Padding(22),
+            BackdropColor = DarkMode.Background,
+            FillColor = DarkMode.Surface
         };
 
-        var subtitleLabel = new Label
+        var stack = new FlowLayoutPanel
         {
-            Text = subtitle,
-            Dock = DockStyle.Top,
-            Height = metric == null ? 44 : 22,
-            Font = BodyFont,
-            ForeColor = DarkMode.TextDisabled,
-            BackColor = Color.Transparent
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
         };
-        card.Controls.Add(subtitleLabel);
+
+        stack.Controls.Add(CreateWrappingLabel(title, TitleFont, DarkMode.TextPrimary, 4));
 
         if (metric != null)
         {
-            card.Controls.Add(new Label
-            {
-                Text = metric,
-                Dock = DockStyle.Top,
-                Height = 48,
-                Font = MetricFont,
-                ForeColor = metricColor ?? DarkMode.TextPrimary,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft
-            });
+            stack.Controls.Add(CreateWrappingLabel(
+                metric,
+                MetricFont,
+                metricColor ?? DarkMode.TextPrimary,
+                8));
         }
 
-        card.Controls.Add(new Label
-        {
-            Text = title,
-            Dock = DockStyle.Top,
-            Height = 28,
-            Font = TitleFont,
-            ForeColor = DarkMode.TextPrimary,
-            BackColor = Color.Transparent
-        });
+        stack.Controls.Add(CreateWrappingLabel(subtitle, BodyFont, DarkMode.TextDisabled, 0));
 
+        void FitLabels()
+        {
+            int width = Math.Max(32, stack.ClientSize.Width);
+            foreach (Control child in stack.Controls)
+            {
+                child.MaximumSize = new Size(width, 0);
+                child.MinimumSize = new Size(width, 0);
+            }
+        }
+
+        stack.Resize += (_, _) => FitLabels();
+        card.Controls.Add(stack);
         host.Controls.Add(card);
+        FitLabels();
         return card;
     }
 
@@ -90,5 +98,23 @@ internal static class ModernUi
         button.UseVisualStyleBackColor = false;
         button.Height = 36;
         button.TextAlign = ContentAlignment.MiddleCenter;
+    }
+
+    private static Label CreateWrappingLabel(
+        string text,
+        Font font,
+        Color color,
+        int bottomMargin)
+    {
+        return new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = font,
+            ForeColor = color,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, 0, bottomMargin),
+            UseMnemonic = false
+        };
     }
 }
