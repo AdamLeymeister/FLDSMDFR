@@ -38,6 +38,8 @@ public partial class FLDSMDFR : Form
     private const int WM_NCLBUTTONDOWN = 0x00A1;
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCCALCSIZE = 0x0083;
+    private const int WM_NCPAINT = 0x0085;
+    private const int WM_NCACTIVATE = 0x0086;
     private const int WM_DWMCOMPOSITIONCHANGED = 0x031E;
 
     private const int HT_CAPTION = 0x0002;
@@ -53,12 +55,17 @@ public partial class FLDSMDFR : Form
     private const int WS_THICKFRAME = 0x00040000;
     private const int WS_MINIMIZEBOX = 0x00020000;
     private const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int WS_EX_DLGMODALFRAME = 0x00000001;
+    private const int WS_EX_WINDOWEDGE = 0x00000100;
+    private const int WS_EX_CLIENTEDGE = 0x00000200;
+    private const int WS_EX_STATICEDGE = 0x00020000;
 
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWA_CAPTION_COLOR = 35;
     private const int DWMWCP_ROUND = 2;
+    private const int DwmwaColorNone = unchecked((int)0xFFFFFFFE);
     private const uint SwpFrameChanged = 0x0020;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoSize = 0x0001;
@@ -100,6 +107,7 @@ public partial class FLDSMDFR : Form
             cp.Style |= WS_THICKFRAME;
             cp.Style |= WS_MINIMIZEBOX;
             cp.Style |= WS_MAXIMIZEBOX;
+            cp.ExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
             return cp;
         }
     }
@@ -132,10 +140,30 @@ public partial class FLDSMDFR : Form
         pnlSideBar.Paint += SideBar_Paint;
         pnlSideBar.Resize += (_, _) => UpdateNavIndicator();
         LocationChanged += (_, _) => UpdateMaximizedBounds();
+        Activated += (_, _) =>
+        {
+            ApplyDwmChrome();
+            Invalidate(true);
+        };
+        Deactivate += (_, _) => Invalidate(true);
     }
 
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == WM_NCACTIVATE)
+        {
+            m.LParam = new IntPtr(-1);
+            base.WndProc(ref m);
+            m.Result = (IntPtr)1;
+            return;
+        }
+
+        if (m.Msg == WM_NCPAINT)
+        {
+            m.Result = IntPtr.Zero;
+            return;
+        }
+
         if (m.Msg == WM_NCCALCSIZE)
         {
             if (m.WParam != IntPtr.Zero && IsZoomed(Handle))
@@ -253,10 +281,10 @@ public partial class FLDSMDFR : Form
         int corners = DWMWCP_ROUND;
         DwmSetWindowAttribute(Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corners, sizeof(int));
 
-        int caption = ColorToBgr(DarkMode.Surface);
+        int caption = DwmwaColorNone;
         DwmSetWindowAttribute(Handle, DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
 
-        int border = ColorToBgr(DarkMode.Border);
+        int border = DwmwaColorNone;
         DwmSetWindowAttribute(Handle, DWMWA_BORDER_COLOR, ref border, sizeof(int));
 
         SetWindowPos(
@@ -272,11 +300,6 @@ public partial class FLDSMDFR : Form
     private void UpdateMaximizedBounds()
     {
         MaximizedBounds = Screen.FromControl(this).WorkingArea;
-    }
-
-    private static int ColorToBgr(Color color)
-    {
-        return color.R | (color.G << 8) | (color.B << 16);
     }
 
     private static Font CreateWindowGlyphFont()
