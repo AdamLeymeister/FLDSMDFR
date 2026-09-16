@@ -5,6 +5,7 @@ namespace AnalysisReviewControl;
 
 public partial class AnalysisReviewControl : ReviewUserControl
 {
+    private const string ColSelect = "Select";
     private const string ColState = "State";
     private const string ColItem = "Item";
     private const string ColFile = "File";
@@ -26,6 +27,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private int[] _sportIndexByRow = Array.Empty<int>();
     private int[] _fileIndexByRow = Array.Empty<int>();
 
+    private readonly RoundedCardPanel _card = new();
     private readonly Panel _pnlToolbar = new();
     private readonly Panel _pnlStatus = new();
     private readonly TextBox _txtSearch = new();
@@ -55,6 +57,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureControl()
     {
         BackColor = DarkMode.Background;
+        Padding = new Padding(4);
         Font = CreateOwnedFont("Segoe UI", 9.5f);
         _sportFont = CreateOwnedFont("Segoe UI", 10f, FontStyle.Bold);
         _fileFont = CreateOwnedFont("Segoe UI", 9.5f);
@@ -62,6 +65,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         ConfigureToolbar();
         ConfigureStatusBar();
         ConfigureGrid();
+        ConfigureCard();
         WireEvents();
         UpdateStats();
     }
@@ -69,9 +73,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureToolbar()
     {
         _pnlToolbar.Dock = DockStyle.Top;
-        _pnlToolbar.Height = 72;
+        _pnlToolbar.Height = 76;
         _pnlToolbar.BackColor = DarkMode.Surface;
-        _pnlToolbar.Padding = new Padding(12, 10, 12, 10);
+        _pnlToolbar.Padding = new Padding(16, 12, 16, 8);
 
         var flow = new FlowLayoutPanel
         {
@@ -102,8 +106,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.Items.Add(AllFiles);
         _cboFile.SelectedIndex = 0;
 
-        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 110);
-        StyleActionButton(_btnDeny, "Deny  N", DarkMode.Error, DarkMode.Background, 100);
+        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Primary, DarkMode.Background, 110);
+        StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 100);
         StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 96);
         StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 110);
 
@@ -114,7 +118,14 @@ public partial class AnalysisReviewControl : ReviewUserControl
         flow.Controls.Add(Wrap(CreateCaption("Review"), CreateButtonRow()));
 
         _pnlToolbar.Controls.Add(flow);
-        Controls.Add(_pnlToolbar);
+    }
+
+    private static Color BlendErrorButton()
+    {
+        return Color.FromArgb(
+            (DarkMode.Surface.R * 4 + DarkMode.Error.R) / 5,
+            (DarkMode.Surface.G * 4 + DarkMode.Error.G) / 5,
+            (DarkMode.Surface.B * 4 + DarkMode.Error.B) / 5);
     }
 
     private Control CreateButtonRow()
@@ -191,35 +202,44 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
-        Controls.Add(_pnlStatus);
     }
 
     private void ConfigureGrid()
     {
         _grid.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 9.5f);
-        _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 8.5f, FontStyle.Bold);
-        _grid.AlternatingRowsDefaultCellStyle = _grid.DefaultCellStyle.Clone();
+        _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 8f, FontStyle.Bold);
 
-        _grid.Columns.Add(CreateTextColumn(ColState, "Status", 96, 88));
+        _grid.Columns.Add(CreateTextColumn(ColSelect, "", 44, 44));
+        _grid.Columns.Add(CreateTextColumn(ColState, "Status", 108, 96));
         _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 320, 160));
         _grid.Columns.Add(CreateTextColumn(ColFile, "File", 180, 100));
         _grid.Columns.Add(CreateTextColumn(ColSummary, "Summary", 220, 140));
 
+        _grid.Columns[ColSelect].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+        _grid.Columns[ColSelect].Width = 44;
+        _grid.Columns[ColSelect].FillWeight = 1;
+        _grid.Columns[ColSelect].Resizable = DataGridViewTriState.False;
         _grid.Columns[ColState].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-        _grid.Columns[ColState].Width = 96;
+        _grid.Columns[ColState].Width = 108;
         _grid.Columns[ColState].FillWeight = 1;
-        _grid.Columns[ColItem].FillWeight = 48;
+        _grid.Columns[ColItem].FillWeight = 46;
         _grid.Columns[ColFile].FillWeight = 24;
-        _grid.Columns[ColSummary].FillWeight = 27;
+        _grid.Columns[ColSummary].FillWeight = 28;
+    }
 
-        _grid.Columns[ColState].DefaultCellStyle.Alignment =
-            DataGridViewContentAlignment.MiddleCenter;
-        _grid.Columns[ColState].HeaderCell.Style.Alignment =
-            DataGridViewContentAlignment.MiddleCenter;
+    private void ConfigureCard()
+    {
+        _card.Dock = DockStyle.Fill;
+        _card.Padding = new Padding(10, 6, 10, 10);
+        _card.BackColor = DarkMode.Surface;
 
-        Controls.Add(_grid);
+        _card.Controls.Add(_grid);
+        _card.Controls.Add(_pnlToolbar);
+        _card.Controls.Add(_pnlStatus);
         _grid.BringToFront();
+
+        Controls.Add(_card);
     }
 
     private static DataGridViewTextBoxColumn CreateTextColumn(
@@ -650,6 +670,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         e.Value = name switch
         {
+            ColSelect => string.Empty,
             ColState => GetStateText(outline),
             ColItem => GetItemText(outline),
             ColFile => GetFileText(outline),
@@ -833,6 +854,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
         OutlineRow outline = _visible[e.RowIndex];
         string column = _grid.Columns[e.ColumnIndex].Name;
 
+        if (column == ColSelect)
+        {
+            return;
+        }
+
         if (column == ColState)
         {
             ReviewSelected(toggle: true, advance: false);
@@ -854,7 +880,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         string column = _grid.Columns[e.ColumnIndex].Name;
-        _grid.Cursor = column == ColState || column == ColItem
+        _grid.Cursor = column is ColState or ColItem or ColSelect
             ? Cursors.Hand
             : Cursors.Default;
     }
@@ -1606,6 +1632,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
         button.Height = 28;
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor =
+            Color.FromArgb(
+                Math.Min(255, backColor.R + 18),
+                Math.Min(255, backColor.G + 18),
+                Math.Min(255, backColor.B + 18));
+        button.FlatAppearance.MouseDownBackColor = backColor;
         button.BackColor = backColor;
         button.ForeColor = foreColor;
         button.Cursor = Cursors.Hand;
