@@ -31,9 +31,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly Panel _pnlToolbar = new();
     private readonly Panel _pnlStatus = new();
     private readonly TextBox _txtSearch = new();
-    private readonly ComboBox _cboSport = new();
-    private readonly ComboBox _cboFile = new();
-    private readonly ComboBox _cboStatus = new();
+    private readonly ThemedComboBox _cboSport = new();
+    private readonly ThemedComboBox _cboFile = new();
+    private readonly ThemedComboBox _cboStatus = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
     private readonly Button _btnUndo = new();
@@ -62,9 +62,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
         AutoScaleMode = AutoScaleMode.None;
         BackColor = DarkMode.Background;
         Padding = new Padding(4);
-        Font = CreateOwnedFont("Segoe UI", 9.5f);
-        _sportFont = CreateOwnedFont("Segoe UI", 10f, FontStyle.Bold);
-        _fileFont = CreateOwnedFont("Segoe UI", 9.5f);
+        Font = CreateOwnedFont("Segoe UI", 10.5f);
+        _sportFont = CreateOwnedFont("Segoe UI", 11.5f, FontStyle.Bold);
+        _fileFont = CreateOwnedFont("Segoe UI", 10.5f);
 
         ConfigureToolbar();
         ConfigureStatusBar();
@@ -77,9 +77,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureToolbar()
     {
         _pnlToolbar.Dock = DockStyle.Top;
-        _pnlToolbar.Height = 76;
+        _pnlToolbar.Height = 86;
         _pnlToolbar.BackColor = DarkMode.Surface;
-        _pnlToolbar.Padding = new Padding(16, 12, 16, 8);
+        _pnlToolbar.Padding = new Padding(14, 10, 14, 8);
 
         var flow = new FlowLayoutPanel
         {
@@ -89,13 +89,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
             BackColor = DarkMode.Surface
         };
 
-        _txtSearch.Width = 220;
-        _txtSearch.PlaceholderText = "Filter sport, file, or match";
+        _txtSearch.PlaceholderText = "Search sport, file, or match";
         StyleTextBox(_txtSearch);
 
-        StyleCombo(_cboSport, 150);
-        StyleCombo(_cboFile, 200);
-        StyleCombo(_cboStatus, 130);
+        StyleCombo(_cboSport, 160);
+        StyleCombo(_cboFile, 210);
+        StyleCombo(_cboStatus, 140);
 
         _cboStatus.Items.AddRange(new object[]
         {
@@ -110,17 +109,17 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.Items.Add(AllFiles);
         _cboFile.SelectedIndex = 0;
 
-        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 110);
-        StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 100);
-        StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 88);
-        StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 96);
-        StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 110);
+        StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 118);
+        StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 104);
+        StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 92);
+        StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 100);
+        StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 118);
         UpdateUndoButton();
 
-        flow.Controls.Add(Wrap(CreateCaption("Search"), _txtSearch));
-        flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
-        flow.Controls.Add(Wrap(CreateCaption("File"), _cboFile));
-        flow.Controls.Add(Wrap(CreateCaption("View"), _cboStatus));
+        flow.Controls.Add(Wrap(CreateCaption("Search"), new ModernFieldHost(_txtSearch, 268, searchIcon: true)));
+        flow.Controls.Add(Wrap(CreateCaption("Sport"), new ModernFieldHost(_cboSport, 168)));
+        flow.Controls.Add(Wrap(CreateCaption("File"), new ModernFieldHost(_cboFile, 218)));
+        flow.Controls.Add(Wrap(CreateCaption("View"), new ModernFieldHost(_cboStatus, 148)));
         flow.Controls.Add(Wrap(CreateCaption("Review"), CreateButtonRow()));
 
         _pnlToolbar.Controls.Add(flow);
@@ -140,8 +139,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Width = 560,
-            Height = 28,
+            Width = 580,
+            Height = 36,
             BackColor = DarkMode.Surface,
             Margin = Padding.Empty
         };
@@ -172,15 +171,15 @@ public partial class AnalysisReviewControl : ReviewUserControl
         var panel = new Panel
         {
             Width = Math.Max(editor.Width, 90),
-            Height = 52,
+            Height = 58,
             BackColor = DarkMode.Surface,
-            Margin = new Padding(0, 0, 16, 0)
+            Margin = new Padding(0, 0, 14, 0)
         };
 
         caption.Dock = DockStyle.Top;
         caption.Height = 16;
         editor.Dock = DockStyle.Bottom;
-        editor.Height = 28;
+        editor.Height = 36;
         panel.Controls.Add(editor);
         panel.Controls.Add(caption);
         panel.Width = editor.Width;
@@ -214,21 +213,22 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureGrid()
     {
         _grid.Dock = DockStyle.Fill;
-        _grid.Font = CreateOwnedFont("Segoe UI", 9.5f);
-        _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 8f, FontStyle.Bold);
+        _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
+        _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
+        _grid.RowTemplate.Height = 50;
 
-        _grid.Columns.Add(CreateTextColumn(ColSelect, "", 44, 44));
-        _grid.Columns.Add(CreateTextColumn(ColState, "Status", 108, 96));
+        _grid.Columns.Add(CreateTextColumn(ColSelect, "", 48, 48));
+        _grid.Columns.Add(CreateTextColumn(ColState, "Status", 120, 108));
         _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 320, 160));
         _grid.Columns.Add(CreateTextColumn(ColFile, "File", 180, 100));
         _grid.Columns.Add(CreateTextColumn(ColSummary, "Summary", 220, 140));
 
         _grid.Columns[ColSelect].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-        _grid.Columns[ColSelect].Width = 44;
+        _grid.Columns[ColSelect].Width = 48;
         _grid.Columns[ColSelect].FillWeight = 1;
         _grid.Columns[ColSelect].Resizable = DataGridViewTriState.False;
         _grid.Columns[ColState].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-        _grid.Columns[ColState].Width = 108;
+        _grid.Columns[ColState].Width = 120;
         _grid.Columns[ColState].FillWeight = 1;
         _grid.Columns[ColItem].FillWeight = 46;
         _grid.Columns[ColFile].FillWeight = 24;
@@ -1707,17 +1707,18 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void StyleTextBox(TextBox textBox)
     {
-        textBox.BorderStyle = BorderStyle.FixedSingle;
+        textBox.BorderStyle = BorderStyle.None;
         textBox.BackColor = DarkMode.ElevatedSurface;
         textBox.ForeColor = DarkMode.TextPrimary;
+        textBox.Font = CreateOwnedFont("Segoe UI", 10f);
         textBox.Margin = Padding.Empty;
     }
 
-    private static void StyleCombo(ComboBox comboBox, int width)
+    private void StyleCombo(ThemedComboBox comboBox, int width)
     {
         comboBox.Width = width;
-        comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        comboBox.FlatStyle = FlatStyle.Flat;
+        comboBox.Font = CreateOwnedFont("Segoe UI", 10f);
+        comboBox.ItemHeight = 26;
         comboBox.BackColor = DarkMode.ElevatedSurface;
         comboBox.ForeColor = DarkMode.TextPrimary;
         comboBox.Margin = Padding.Empty;
@@ -1733,7 +1734,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         button.Text = text;
         button.AutoSize = false;
         button.Width = width;
-        button.Height = 28;
+        button.Height = 36;
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         button.FlatAppearance.MouseOverBackColor =

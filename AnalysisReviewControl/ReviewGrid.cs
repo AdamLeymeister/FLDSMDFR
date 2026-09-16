@@ -6,12 +6,12 @@ namespace AnalysisReviewControl;
 internal sealed class ReviewGrid : DataGridView
 {
     private const string SelectColumnName = "Select";
-    private const int CheckboxSize = 16;
-    private const int PillHeight = 22;
+    private const int CheckboxSize = 18;
+    private const int PillHeight = 24;
 
     private int _selectionAnchor;
-    private readonly Font _headerFont = new("Segoe UI", 8f, FontStyle.Bold);
-    private readonly Font _pillFont = new("Segoe UI", 8f, FontStyle.Bold);
+    private readonly Font _headerFont = new("Segoe UI", 9f, FontStyle.Bold);
+    private readonly Font _pillFont = new("Segoe UI", 8.5f, FontStyle.Bold);
 
     public ReviewGrid()
     {
@@ -30,14 +30,14 @@ internal sealed class ReviewGrid : DataGridView
         CellBorderStyle = DataGridViewCellBorderStyle.None;
         ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
         ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        ColumnHeadersHeight = 44;
+        ColumnHeadersHeight = 48;
         ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         EditMode = DataGridViewEditMode.EditProgrammatically;
         EnableHeadersVisualStyles = false;
         GridColor = DarkMode.Surface;
         MultiSelect = true;
         RowHeadersVisible = false;
-        RowTemplate.Height = 42;
+        RowTemplate.Height = 50;
         SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         ShowCellToolTips = true;
         StandardTab = true;
@@ -429,9 +429,9 @@ internal sealed class ReviewGrid : DataGridView
                     checkPen,
                     new[]
                     {
-                        new Point(box.Left + 4, box.Y + 9),
-                        new Point(box.Left + 7, box.Y + 12),
-                        new Point(box.Right - 4, box.Y + 5)
+                        new Point(box.Left + 4, box.Y + 10),
+                        new Point(box.Left + 8, box.Y + 14),
+                        new Point(box.Right - 4, box.Y + 6)
                     });
             }
         }
