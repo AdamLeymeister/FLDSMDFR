@@ -187,7 +187,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "Click group to expand   Y confirm   N deny   Space cycle status   F3 next review";
+        _lblHelp.Text = "Ctrl+click  Shift+click  Ctrl+A select all   Y confirm   N deny   Space cycle";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -297,6 +297,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             if (keyData == (Keys.Control | Keys.A))
             {
+                _grid.SelectAllVisibleRows();
                 return true;
             }
 
@@ -824,6 +825,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
+        if ((ModifierKeys & (Keys.Control | Keys.Shift)) != Keys.None)
+        {
+            return;
+        }
+
         OutlineRow outline = _visible[e.RowIndex];
         string column = _grid.Columns[e.ColumnIndex].Name;
 
@@ -867,7 +873,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (e.KeyCode == Keys.Space)
+        if (e.KeyCode == Keys.Space && !e.Control && !e.Shift)
         {
             ReviewSelected(toggle: true, advance: false);
             e.Handled = true;
@@ -875,7 +881,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (e.KeyCode == Keys.Left)
+        if (e.KeyCode == Keys.Left && !e.Control && !e.Shift)
         {
             CollapseCurrent();
             e.Handled = true;
@@ -883,7 +889,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (e.KeyCode == Keys.Right)
+        if (e.KeyCode == Keys.Right && !e.Control && !e.Shift)
         {
             ExpandCurrent();
             e.Handled = true;
@@ -1409,6 +1415,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.ClearSelection();
         _grid.CurrentCell = _grid.Rows[visibleIndex].Cells[ColItem];
         _grid.Rows[visibleIndex].Selected = true;
+        _grid.SetSelectionAnchor(visibleIndex);
 
         try
         {
