@@ -25,7 +25,7 @@ internal sealed class ModernFieldHost : Panel
         Height = 36;
         Padding = searchIcon
             ? new Padding(32, 6, 10, 6)
-            : new Padding(4, 4, 4, 4);
+            : new Padding(8, 6, 8, 6);
         BackColor = Color.Transparent;
         Margin = Padding.Empty;
 

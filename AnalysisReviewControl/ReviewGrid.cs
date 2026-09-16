@@ -10,6 +10,7 @@ internal sealed class ReviewGrid : DataGridView
     private const int PillHeight = 24;
 
     private int _selectionAnchor;
+    private int _hoverRow = -1;
     private readonly Font _headerFont = new("Segoe UI", 9f, FontStyle.Bold);
     private readonly Font _pillFont = new("Segoe UI", 8.5f, FontStyle.Bold);
 
@@ -242,6 +243,40 @@ internal sealed class ReviewGrid : DataGridView
         base.OnKeyDown(e);
     }
 
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        HitTestInfo hit = HitTest(e.X, e.Y);
+        SetHoverRow(hit.Type == DataGridViewHitTestType.Cell ? hit.RowIndex : -1);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        SetHoverRow(-1);
+    }
+
+    private void SetHoverRow(int rowIndex)
+    {
+        if (_hoverRow == rowIndex)
+        {
+            return;
+        }
+
+        int previous = _hoverRow;
+        _hoverRow = rowIndex;
+        InvalidateDataRow(previous);
+        InvalidateDataRow(_hoverRow);
+    }
+
+    private void InvalidateDataRow(int rowIndex)
+    {
+        if (rowIndex >= 0 && rowIndex < RowCount)
+        {
+            InvalidateRow(rowIndex);
+        }
+    }
+
     protected override void OnCellPainting(DataGridViewCellPaintingEventArgs e)
     {
         if (e.Graphics == null || e.ColumnIndex < 0)
@@ -260,9 +295,12 @@ internal sealed class ReviewGrid : DataGridView
         }
 
         bool selected = (e.State & DataGridViewElementStates.Selected) != 0;
+        bool hovered = e.RowIndex == _hoverRow;
         Color rowBack = selected
-            ? Blend(DarkMode.Surface, DarkMode.Primary, 0.14f)
-            : DarkMode.Surface;
+            ? Blend(DarkMode.Surface, DarkMode.Primary, hovered ? 0.22f : 0.14f)
+            : hovered
+                ? Blend(DarkMode.Surface, DarkMode.Primary, 0.09f)
+                : DarkMode.Surface;
 
         using (var back = new SolidBrush(rowBack))
         {

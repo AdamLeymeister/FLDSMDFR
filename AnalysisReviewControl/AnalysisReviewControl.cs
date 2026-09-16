@@ -31,9 +31,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly Panel _pnlToolbar = new();
     private readonly Panel _pnlStatus = new();
     private readonly TextBox _txtSearch = new();
-    private readonly ThemedComboBox _cboSport = new();
-    private readonly ThemedComboBox _cboFile = new();
-    private readonly ThemedComboBox _cboStatus = new();
+    private readonly ThemedDropDown _cboSport = new();
+    private readonly ThemedDropDown _cboFile = new();
+    private readonly ThemedDropDown _cboStatus = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
     private readonly Button _btnUndo = new();
@@ -92,9 +92,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _txtSearch.PlaceholderText = "Search sport, file, or match";
         StyleTextBox(_txtSearch);
 
-        StyleCombo(_cboSport, 160);
-        StyleCombo(_cboFile, 210);
-        StyleCombo(_cboStatus, 140);
+        StyleCombo(_cboSport, 168);
+        StyleCombo(_cboFile, 218);
+        StyleCombo(_cboStatus, 148);
 
         _cboStatus.Items.AddRange(new object[]
         {
@@ -117,9 +117,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
         UpdateUndoButton();
 
         flow.Controls.Add(Wrap(CreateCaption("Search"), new ModernFieldHost(_txtSearch, 268, searchIcon: true)));
-        flow.Controls.Add(Wrap(CreateCaption("Sport"), new ModernFieldHost(_cboSport, 168)));
-        flow.Controls.Add(Wrap(CreateCaption("File"), new ModernFieldHost(_cboFile, 218)));
-        flow.Controls.Add(Wrap(CreateCaption("View"), new ModernFieldHost(_cboStatus, 148)));
+        flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
+        flow.Controls.Add(Wrap(CreateCaption("File"), _cboFile));
+        flow.Controls.Add(Wrap(CreateCaption("View"), _cboStatus));
         flow.Controls.Add(Wrap(CreateCaption("Review"), CreateButtonRow()));
 
         _pnlToolbar.Controls.Add(flow);
@@ -1714,13 +1714,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
         textBox.Margin = Padding.Empty;
     }
 
-    private void StyleCombo(ThemedComboBox comboBox, int width)
+    private void StyleCombo(ThemedDropDown comboBox, int width)
     {
         comboBox.Width = width;
+        comboBox.Height = 36;
         comboBox.Font = CreateOwnedFont("Segoe UI", 10f);
-        comboBox.ItemHeight = 26;
-        comboBox.BackColor = DarkMode.ElevatedSurface;
-        comboBox.ForeColor = DarkMode.TextPrimary;
         comboBox.Margin = Padding.Empty;
     }
 
