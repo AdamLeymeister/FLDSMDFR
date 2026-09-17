@@ -665,12 +665,24 @@ public partial class FLDSMDFR : Form
 
     private DashboardView GetDashboardView()
     {
-        return _dashboardView ??= new DashboardView();
+        _dashboardView ??= new DashboardView();
+        if (_importView != null)
+        {
+            _dashboardView.Bind(_importView);
+        }
+
+        return _dashboardView;
     }
 
     private ImportView GetImportView()
     {
-        return _importView ??= new ImportView();
+        if (_importView == null)
+        {
+            _importView = new ImportView();
+            _dashboardView?.Bind(_importView);
+        }
+
+        return _importView;
     }
 
     private UtilitiesView GetUtilitiesView()

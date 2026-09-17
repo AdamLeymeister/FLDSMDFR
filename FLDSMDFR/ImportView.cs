@@ -1,4 +1,5 @@
 ﻿using AnalysisReviewControl;
+using FLDSMDFR.Core.Models;
 using FLDSMDFR.Core.Services;
 using FLDSMDFR.Themes;
 
@@ -10,6 +11,13 @@ public partial class ImportView : UserControl
     private readonly JsonAnalyzer _analyzer = new();
     private string? _sourcePath;
     private List<string> _catalogSports = new();
+
+    public event EventHandler? ReviewChanged;
+
+    public ReviewProgressSnapshot GetProgress()
+    {
+        return _reviewControl.GetProgress();
+    }
 
     public ImportView()
     {
@@ -23,6 +31,7 @@ public partial class ImportView : UserControl
         };
         _reviewControl.ImportClicked += (_, _) => ImportJson();
         _reviewControl.ExportClicked += (_, _) => ExportJson();
+        _reviewControl.ReviewChanged += (_, e) => ReviewChanged?.Invoke(this, e);
 
         pnlReview.Controls.Add(_reviewControl);
     }

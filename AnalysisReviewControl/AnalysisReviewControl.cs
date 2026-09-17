@@ -59,10 +59,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private Font? _fileFont;
     private bool _updatingUi;
     private string _searchText = string.Empty;
+    private readonly List<DateTime> _reviewTimes = new();
 
     public event EventHandler? ImportClicked;
 
     public event EventHandler? ExportClicked;
+
+    public event EventHandler? ReviewChanged;
 
     public IReadOnlyList<AnalysisTableRow> Rows => _rows;
 
@@ -450,6 +453,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _rows = rows as AnalysisTableRow[] ?? rows.ToArray();
         _undoStack.Clear();
         _pendingUndo = null;
+        _reviewTimes.Clear();
         BuildSportIndex();
         RebuildSportFilter();
         RebuildFileFilter();
@@ -1849,6 +1853,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
             row.Decision = decision;
 
+            if (_countsInTree[cloneIndex] &&
+                previous == ReviewDecision.Pending &&
+                decision != ReviewDecision.Pending)
+            {
+                _reviewTimes.Add(DateTime.UtcNow);
+            }
+
             if (!_countsInTree[cloneIndex])
             {
                 continue;
@@ -2228,6 +2239,65 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _lblStats.Text =
             $"{total:N0} matches   ·   {accurate:N0} accurate   ·   {denied:N0} denied   ·   {remaining:N0} to review{treeNote}";
+
+        ReviewChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public ReviewProgressSnapshot GetProgress()
+    {
+        int total = 0;
+        int accurate = 0;
+        int denied = 0;
+
+        foreach (SportNode sport in _sports)
+        {
+            total += sport.Total;
+            accurate += sport.Accurate;
+            denied += sport.Denied;
+        }
+
+        int pending = Math.Max(0, total - accurate - denied);
+        return new ReviewProgressSnapshot
+        {
+            Total = total,
+            Accurate = accurate,
+            Denied = denied,
+            Pending = pending,
+            EstimatedRemaining = EstimateRemaining(pending)
+        };
+    }
+
+    private TimeSpan? EstimateRemaining(int pending)
+    {
+        if (pending <= 0)
+        {
+            return TimeSpan.Zero;
+        }
+
+        if (_reviewTimes.Count < 3)
+        {
+            return null;
+        }
+
+        TimeSpan elapsed = DateTime.UtcNow - _reviewTimes[0];
+        if (elapsed.TotalSeconds < 20)
+        {
+            return null;
+        }
+
+        if (_reviewTimes.Count > 200)
+        {
+            _reviewTimes.RemoveRange(0, _reviewTimes.Count - 200);
+            elapsed = DateTime.UtcNow - _reviewTimes[0];
+        }
+
+        double perSecond = _reviewTimes.Count / elapsed.TotalSeconds;
+        if (perSecond <= 0)
+        {
+            return null;
+        }
+
+        return TimeSpan.FromSeconds(pending / perSecond);
     }
 
     private void RebuildSportFilter()
