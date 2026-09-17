@@ -851,12 +851,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 string? fileFilter = GetSelectedFile();
                 string status = _cboStatus.SelectedItem as string ?? StatusAll;
 
-                IEnumerable<int> matches = file.RowIndices
-                    .Where(rowIndex => MatchesRow(rowIndex, fileFilter, status))
-                    .OrderBy(rowIndex => _rows[rowIndex].LineNumber)
-                    .ThenBy(rowIndex => DisplayWord(_rows[rowIndex]), StringComparer.OrdinalIgnoreCase);
-
-                foreach (int rowIndex in matches)
+                foreach (int rowIndex in GetOrderedMatches(file, fileFilter, status))
                 {
                     _visible.Add(OutlineRow.Match(sportIndex, fileIndex, rowIndex));
                 }
@@ -1510,6 +1505,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             SelectVisibleRow(next);
         }
+        else if (TrySelectNextHit(first))
+        {
+            return;
+        }
         else if (keep >= 0)
         {
             SelectVisibleRow(keep);
@@ -1528,6 +1527,147 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         return -1;
+    }
+
+    private bool TrySelectNextHit(OutlineRow from)
+    {
+        if (!TryFindNextHit(from, out int sportIndex, out int fileIndex, out int rowIndex))
+        {
+            return false;
+        }
+
+        int existing = FindVisibleIndex(OutlineRow.Match(sportIndex, fileIndex, rowIndex));
+        if (existing >= 0)
+        {
+            SelectVisibleRow(existing);
+            return true;
+        }
+
+        SportNode sport = _sports[sportIndex];
+        sport.Expanded = true;
+        EnsureFiles(sport);
+        if (fileIndex >= 0 && fileIndex < sport.Files.Count)
+        {
+            sport.Files[fileIndex].Expanded = true;
+        }
+
+        RebuildVisible();
+        UpdateStats();
+
+        int visibleIndex = FindVisibleIndex(OutlineRow.Match(sportIndex, fileIndex, rowIndex));
+        if (visibleIndex < 0)
+        {
+            return false;
+        }
+
+        SelectVisibleRow(visibleIndex);
+        return true;
+    }
+
+    private bool TryFindNextHit(
+        OutlineRow from,
+        out int sportIndex,
+        out int fileIndex,
+        out int rowIndex)
+    {
+        sportIndex = -1;
+        fileIndex = -1;
+        rowIndex = -1;
+
+        string? fileFilter = GetSelectedFile();
+        string status = _cboStatus.SelectedItem as string ?? StatusAll;
+        int startSport = from.SportIndex;
+        int startFile = from.Kind == OutlineKind.Sport ? -1 : from.FileIndex;
+        int startRow = from.Kind == OutlineKind.Match ? from.RowIndex : -1;
+        bool skipRestOfSport = from.Kind == OutlineKind.Sport;
+        bool skipRestOfFile = from.Kind == OutlineKind.File;
+
+        for (int s = startSport; s < _sports.Count; s++)
+        {
+            SportNode sport = _sports[s];
+            if (sport.FilteredTotal == 0)
+            {
+                continue;
+            }
+
+            if (s == startSport && skipRestOfSport)
+            {
+                continue;
+            }
+
+            EnsureFiles(sport);
+
+            int firstFile = s == startSport && startFile >= 0 ? startFile : 0;
+            for (int f = firstFile; f < sport.Files.Count; f++)
+            {
+                FileNode file = sport.Files[f];
+                if (file.FilteredTotal == 0)
+                {
+                    continue;
+                }
+
+                if (s == startSport && f == startFile && skipRestOfFile)
+                {
+                    continue;
+                }
+
+                List<int> matches = GetOrderedMatches(file, fileFilter, status);
+                int startMatch = 0;
+                if (s == startSport && f == startFile && startRow >= 0)
+                {
+                    int at = matches.IndexOf(startRow);
+                    if (at >= 0)
+                    {
+                        startMatch = at + 1;
+                    }
+                    else
+                    {
+                        startMatch = matches.FindIndex(index => CompareMatchOrder(index, startRow) > 0);
+                        if (startMatch < 0)
+                        {
+                            startMatch = matches.Count;
+                        }
+                    }
+                }
+
+                if (startMatch >= matches.Count)
+                {
+                    continue;
+                }
+
+                sportIndex = s;
+                fileIndex = f;
+                rowIndex = matches[startMatch];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private List<int> GetOrderedMatches(FileNode file, string? fileFilter, string status)
+    {
+        return file.RowIndices
+            .Where(index => MatchesRow(index, fileFilter, status))
+            .OrderBy(index => _rows[index].LineNumber)
+            .ThenBy(index => DisplayWord(_rows[index]), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(index => index)
+            .ToList();
+    }
+
+    private int CompareMatchOrder(int left, int right)
+    {
+        int cmp = _rows[left].LineNumber.CompareTo(_rows[right].LineNumber);
+        if (cmp != 0)
+        {
+            return cmp;
+        }
+
+        cmp = string.Compare(
+            DisplayWord(_rows[left]),
+            DisplayWord(_rows[right]),
+            StringComparison.OrdinalIgnoreCase);
+        return cmp != 0 ? cmp : left.CompareTo(right);
     }
 
     private void ReviewOutline(
