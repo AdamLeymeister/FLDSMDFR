@@ -113,7 +113,19 @@ internal sealed class ReviewGrid : DataGridView
         if (IsSelectColumn(e.ColumnIndex))
         {
             Focus();
-            SelectGroup(e.RowIndex, toggle: true);
+            if (ResolveRowBand?.Invoke(e.RowIndex) is ReviewRowBand.Sport or ReviewRowBand.File)
+            {
+                SelectGroup(e.RowIndex, toggle: true);
+                return;
+            }
+
+            var checkboxSelection = CaptureSelection();
+            if (!checkboxSelection.Add(e.RowIndex))
+            {
+                checkboxSelection.Remove(e.RowIndex);
+            }
+
+            ApplySelection(checkboxSelection, e.RowIndex, SanitizeColumnIndex(e.ColumnIndex));
             return;
         }
 
@@ -122,13 +134,6 @@ internal sealed class ReviewGrid : DataGridView
 
         if (!control && !shift)
         {
-            if (ResolveRowBand?.Invoke(e.RowIndex) is ReviewRowBand.Sport or ReviewRowBand.File)
-            {
-                SelectGroup(e.RowIndex, toggle: false);
-                Invalidate();
-                return;
-            }
-
             _selectionAnchor = e.RowIndex;
             base.OnCellMouseDown(e);
             Invalidate();
@@ -152,12 +157,6 @@ internal sealed class ReviewGrid : DataGridView
             }
 
             ApplySelection(selected, e.RowIndex, columnIndex);
-            return;
-        }
-
-        if (ResolveRowBand?.Invoke(e.RowIndex) is ReviewRowBand.Sport or ReviewRowBand.File)
-        {
-            SelectGroup(e.RowIndex, toggle: true);
             return;
         }
 

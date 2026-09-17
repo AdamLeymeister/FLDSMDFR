@@ -1160,6 +1160,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
             OpenInVsCode(_sports[outline.SportIndex].Files[outline.FileIndex].Name);
             return;
         }
+
+        if (outline.Kind is OutlineKind.Sport or OutlineKind.File)
+        {
+            ToggleExpanded(outline);
+        }
     }
 
     private IReadOnlyList<int> ExpandAndCollectGroupRows(int visibleIndex)
