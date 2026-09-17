@@ -50,6 +50,7 @@ public partial class FLDSMDFR : Form
     private const int WM_DWMCOMPOSITIONCHANGED = 0x031E;
 
     private const int HT_CAPTION = 0x0002;
+    private const int HTCLIENT = 1;
     private const int HTLEFT = 10;
     private const int HTRIGHT = 11;
     private const int HTTOP = 12;
@@ -130,9 +131,7 @@ public partial class FLDSMDFR : Form
     {
         FormBorderStyle = FormBorderStyle.None;
         ControlBox = false;
-        Padding = Padding.Empty;
-
-        BackColor = DarkMode.Background;
+        BackColor = DarkMode.Surface;
         ForeColor = DarkMode.TextPrimary;
 
         pnlMain.BackColor = DarkMode.Background;
@@ -142,13 +141,91 @@ public partial class FLDSMDFR : Form
         MinimumSize = new Size(900, 600);
 
         SetStyle(ControlStyles.ResizeRedraw, true);
+        SyncResizePadding();
 
         pnlTopBar.Paint += TopBar_Paint;
         pnlSideBar.Paint += SideBar_Paint;
         pnlSideBar.Resize += (_, _) => UpdateNavIndicator();
         LocationChanged += (_, _) => UpdateMaximizedBounds();
+        SizeChanged += (_, _) => SyncResizePadding();
         Activated += (_, _) => Invalidate(true);
         Deactivate += (_, _) => Invalidate(true);
+    }
+
+    private void SyncResizePadding()
+    {
+        Padding = WindowState == FormWindowState.Maximized
+            ? Padding.Empty
+            : new Padding(ResizeBorderSize);
+    }
+
+    private int HitTestResize(IntPtr lParam)
+    {
+        long packed = lParam.ToInt64();
+        var screen = new Point(
+            (short)(packed & 0xFFFF),
+            (short)((packed >> 16) & 0xFFFF));
+        Point mousePosition = PointToClient(screen);
+        int buttonBand = WindowButtonWidth * 3;
+
+        bool left =
+            mousePosition.X >= 0 &&
+            mousePosition.X <= ResizeBorderSize;
+
+        bool right =
+            mousePosition.X <= ClientSize.Width &&
+            mousePosition.X >= ClientSize.Width - ResizeBorderSize;
+
+        bool top =
+            mousePosition.Y >= 0 &&
+            mousePosition.Y <= ResizeBorderSize &&
+            mousePosition.X < ClientSize.Width - buttonBand;
+
+        bool bottom =
+            mousePosition.Y <= ClientSize.Height &&
+            mousePosition.Y >= ClientSize.Height - ResizeBorderSize;
+
+        if (left && top)
+        {
+            return HTTOPLEFT;
+        }
+
+        if (right && top)
+        {
+            return HTTOPRIGHT;
+        }
+
+        if (left && bottom)
+        {
+            return HTBOTTOMLEFT;
+        }
+
+        if (right && bottom)
+        {
+            return HTBOTTOMRIGHT;
+        }
+
+        if (left)
+        {
+            return HTLEFT;
+        }
+
+        if (right)
+        {
+            return HTRIGHT;
+        }
+
+        if (top)
+        {
+            return HTTOP;
+        }
+
+        if (bottom)
+        {
+            return HTBOTTOM;
+        }
+
+        return HTCLIENT;
     }
 
     protected override void WndProc(ref Message m)
@@ -184,75 +261,10 @@ public partial class FLDSMDFR : Form
         if (m.Msg == WM_NCHITTEST &&
             WindowState != FormWindowState.Maximized)
         {
-            long packed = m.LParam.ToInt64();
-            var screen = new Point(
-                (short)(packed & 0xFFFF),
-                (short)((packed >> 16) & 0xFFFF));
-            Point mousePosition = PointToClient(screen);
-            int buttonBand = WindowButtonWidth * 3;
-
-            bool left =
-                mousePosition.X >= 0 &&
-                mousePosition.X <= ResizeBorderSize;
-
-            bool right =
-                mousePosition.X <= ClientSize.Width &&
-                mousePosition.X >= ClientSize.Width - ResizeBorderSize;
-
-            bool top =
-                mousePosition.Y >= 0 &&
-                mousePosition.Y <= ResizeBorderSize &&
-                mousePosition.X < ClientSize.Width - buttonBand;
-
-            bool bottom =
-                mousePosition.Y <= ClientSize.Height &&
-                mousePosition.Y >= ClientSize.Height - ResizeBorderSize;
-
-            if (left && top)
+            int hit = HitTestResize(m.LParam);
+            if (hit != HTCLIENT)
             {
-                m.Result = (IntPtr)HTTOPLEFT;
-                return;
-            }
-
-            if (right && top)
-            {
-                m.Result = (IntPtr)HTTOPRIGHT;
-                return;
-            }
-
-            if (left && bottom)
-            {
-                m.Result = (IntPtr)HTBOTTOMLEFT;
-                return;
-            }
-
-            if (right && bottom)
-            {
-                m.Result = (IntPtr)HTBOTTOMRIGHT;
-                return;
-            }
-
-            if (left)
-            {
-                m.Result = (IntPtr)HTLEFT;
-                return;
-            }
-
-            if (right)
-            {
-                m.Result = (IntPtr)HTRIGHT;
-                return;
-            }
-
-            if (top)
-            {
-                m.Result = (IntPtr)HTTOP;
-                return;
-            }
-
-            if (bottom)
-            {
-                m.Result = (IntPtr)HTBOTTOM;
+                m.Result = (IntPtr)hit;
                 return;
             }
         }
