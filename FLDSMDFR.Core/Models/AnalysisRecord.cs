@@ -29,5 +29,9 @@ public class Term
 
     public string Found { get; set; } = string.Empty;
 
+    public string Word { get; set; } = string.Empty;
+
+    public int Line { get; set; }
+
     public bool IsAccurate { get; set; } = false;
 }

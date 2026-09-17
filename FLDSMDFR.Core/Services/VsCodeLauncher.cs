@@ -5,7 +5,7 @@ namespace FLDSMDFR.Core.Services;
 
 public static class VsCodeLauncher
 {
-    public static int Open(string path, string? searchText = null)
+    public static int Open(string path, string? searchText = null, int lineNumber = 0)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -27,7 +27,7 @@ public static class VsCodeLauncher
         }
         else if (File.Exists(fullPath))
         {
-            (int line, int column, int length) = FindHit(fullPath, searchText);
+            (int line, int column, int length) = FindHit(fullPath, searchText, lineNumber);
             arguments = $"--reuse-window -g {Quote($"{fullPath}:{line}:{column}")}";
             selectLength = length;
         }
@@ -50,8 +50,16 @@ public static class VsCodeLauncher
         return selectLength;
     }
 
-    private static (int Line, int Column, int Length) FindHit(string filePath, string? searchText)
+    private static (int Line, int Column, int Length) FindHit(
+        string filePath,
+        string? searchText,
+        int preferredLine)
     {
+        if (preferredLine > 0 && string.IsNullOrWhiteSpace(searchText))
+        {
+            return (preferredLine, 1, 0);
+        }
+
         if (string.IsNullOrWhiteSpace(searchText))
         {
             return (1, 1, 0);
@@ -61,14 +69,24 @@ public static class VsCodeLauncher
         foreach (string line in File.ReadLines(filePath))
         {
             lineNumber++;
+            if (preferredLine > 0 && lineNumber != preferredLine)
+            {
+                continue;
+            }
+
             int index = line.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
             if (index >= 0)
             {
                 return (lineNumber, index + 1, searchText.Length);
             }
+
+            if (preferredLine > 0)
+            {
+                return (preferredLine, 1, searchText.Length);
+            }
         }
 
-        return (1, 1, 0);
+        return preferredLine > 0 ? (preferredLine, 1, searchText.Length) : (1, 1, 0);
     }
 
     private static string? FindCodeExecutable()

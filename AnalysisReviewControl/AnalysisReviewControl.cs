@@ -9,6 +9,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private const string ColSelect = "Select";
     private const string ColState = "State";
     private const string ColItem = "Item";
+    private const string ColLine = "Line";
     private const string ColFile = "File";
     private const string ColSummary = "Summary";
 
@@ -27,6 +28,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly List<OutlineRow> _visible = new();
     private int[] _sportIndexByRow = Array.Empty<int>();
     private int[] _fileIndexByRow = Array.Empty<int>();
+    private CloneKey[] _cloneKeyByRow = Array.Empty<CloneKey>();
+    private bool[] _countsInTree = Array.Empty<bool>();
+    private readonly Dictionary<CloneKey, int[]> _clonesByKey = new();
 
     private readonly RoundedCardPanel _card = new();
     private readonly Panel _pnlToolbar = new();
@@ -90,7 +94,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             BackColor = DarkMode.Surface
         };
 
-        _txtSearch.PlaceholderText = "Search sport, file, or match";
+        _txtSearch.PlaceholderText = "Search sport, file, word, or line";
         StyleTextBox(_txtSearch);
 
         StyleCombo(_cboSport, 168);
@@ -220,9 +224,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _grid.Columns.Add(CreateTextColumn(ColSelect, "", 48, 48));
         _grid.Columns.Add(CreateTextColumn(ColState, "Status", 120, 108));
-        _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 320, 160));
+        _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 280, 140));
+        _grid.Columns.Add(CreateTextColumn(ColLine, "Line", 72, 56));
         _grid.Columns.Add(CreateTextColumn(ColFile, "File", 180, 100));
-        _grid.Columns.Add(CreateTextColumn(ColSummary, "Summary", 220, 140));
+        _grid.Columns.Add(CreateTextColumn(ColSummary, "Summary", 240, 140));
 
         _grid.Columns[ColSelect].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _grid.Columns[ColSelect].Width = 48;
@@ -231,9 +236,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.Columns[ColState].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _grid.Columns[ColState].Width = 120;
         _grid.Columns[ColState].FillWeight = 1;
-        _grid.Columns[ColItem].FillWeight = 46;
-        _grid.Columns[ColFile].FillWeight = 24;
-        _grid.Columns[ColSummary].FillWeight = 28;
+        _grid.Columns[ColLine].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+        _grid.Columns[ColLine].Width = 72;
+        _grid.Columns[ColLine].FillWeight = 1;
+        _grid.Columns[ColItem].FillWeight = 40;
+        _grid.Columns[ColFile].FillWeight = 22;
+        _grid.Columns[ColSummary].FillWeight = 30;
     }
 
     private void ConfigureCard()
@@ -375,8 +383,34 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void BuildSportIndex()
     {
         _sports.Clear();
+        _clonesByKey.Clear();
         _sportIndexByRow = new int[_rows.Length];
         _fileIndexByRow = new int[_rows.Length];
+        _cloneKeyByRow = new CloneKey[_rows.Length];
+        _countsInTree = new bool[_rows.Length];
+        Array.Fill(_sportIndexByRow, -1);
+        Array.Fill(_fileIndexByRow, -1);
+
+        var cloneLists = new Dictionary<CloneKey, List<int>>();
+        for (int i = 0; i < _rows.Length; i++)
+        {
+            CloneKey key = CloneKey.From(_rows[i]);
+            _cloneKeyByRow[i] = key;
+            if (!cloneLists.TryGetValue(key, out List<int>? members))
+            {
+                members = new List<int>();
+                cloneLists.Add(key, members);
+            }
+
+            members.Add(i);
+        }
+
+        foreach (KeyValuePair<CloneKey, List<int>> pair in cloneLists)
+        {
+            int[] members = pair.Value.ToArray();
+            _clonesByKey[pair.Key] = members;
+            UnifyCloneDecision(members);
+        }
 
         var sports = new Dictionary<string, SportNode>(StringComparer.OrdinalIgnoreCase);
 
@@ -391,9 +425,17 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 sports.Add(sportName, sport);
             }
 
-            sport.RowIndices.Add(i);
-            sport.Total++;
-            AddDecision(sport, row.Decision, 1);
+            _sportIndexByRow[i] = -1;
+            _fileIndexByRow[i] = -1;
+
+            CloneKey key = _cloneKeyByRow[i];
+            if (sport.SeenCloneKeys.Add(key))
+            {
+                sport.RowIndices.Add(i);
+                sport.Total++;
+                _countsInTree[i] = true;
+                AddDecision(sport, row.Decision, 1);
+            }
         }
 
         _sports.AddRange(sports.Values.OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase));
@@ -404,9 +446,64 @@ public partial class AnalysisReviewControl : ReviewUserControl
             foreach (int rowIndex in sport.RowIndices)
             {
                 _sportIndexByRow[rowIndex] = sportIndex;
-                _fileIndexByRow[rowIndex] = -1;
+            }
+
+            foreach (int rowIndex in GetSportCloneRows(sport))
+            {
+                _sportIndexByRow[rowIndex] = sportIndex;
             }
         }
+    }
+
+    private void UnifyCloneDecision(int[] members)
+    {
+        if (members.Length <= 1)
+        {
+            return;
+        }
+
+        ReviewDecision decision = _rows[members[0]].Decision;
+        for (int i = 1; i < members.Length; i++)
+        {
+            if (_rows[members[i]].Decision != decision)
+            {
+                decision = ReviewDecision.Pending;
+                break;
+            }
+        }
+
+        foreach (int rowIndex in members)
+        {
+            _rows[rowIndex].Decision = decision;
+        }
+    }
+
+    private IEnumerable<int> GetSportCloneRows(SportNode sport)
+    {
+        var seen = new HashSet<int>();
+        foreach (int representative in sport.RowIndices)
+        {
+            foreach (int clone in GetClones(representative))
+            {
+                if (string.Equals(_rows[clone].Sport, sport.Name, StringComparison.OrdinalIgnoreCase) &&
+                    seen.Add(clone))
+                {
+                    yield return clone;
+                }
+            }
+        }
+    }
+
+    private int[] GetClones(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _cloneKeyByRow.Length)
+        {
+            return Array.Empty<int>();
+        }
+
+        return _clonesByKey.TryGetValue(_cloneKeyByRow[rowIndex], out int[]? members)
+            ? members
+            : new[] { rowIndex };
     }
 
     private void EnsureFiles(SportNode sport)
@@ -539,7 +636,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             int denied = 0;
             foreach (int rowIndex in file.RowIndices)
             {
-                if (!MatchesRow(_rows[rowIndex], fileFilter, status))
+                if (!MatchesRow(rowIndex, fileFilter, status))
                 {
                     continue;
                 }
@@ -563,7 +660,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         foreach (int rowIndex in sport.RowIndices)
         {
             AnalysisTableRow row = _rows[rowIndex];
-            if (!MatchesRow(row, fileFilter, status))
+            if (!MatchesRow(rowIndex, fileFilter, status))
             {
                 continue;
             }
@@ -582,8 +679,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
     }
 
-    private bool MatchesRow(AnalysisTableRow row, string? fileFilter, string status)
+    private bool MatchesRow(int rowIndex, string? fileFilter, string status)
     {
+        AnalysisTableRow row = _rows[rowIndex];
         if (status == StatusAccurate && row.Decision != ReviewDecision.Accurate)
         {
             return false;
@@ -610,9 +708,20 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return true;
         }
 
-        return Contains(row.Sport, _searchText) ||
-               Contains(row.Found, _searchText) ||
-               Contains(row.File, _searchText);
+        foreach (int cloneIndex in GetClones(rowIndex))
+        {
+            AnalysisTableRow clone = _rows[cloneIndex];
+            if (Contains(clone.Sport, _searchText) ||
+                Contains(clone.Found, _searchText) ||
+                Contains(clone.Word, _searchText) ||
+                Contains(clone.File, _searchText) ||
+                Contains(clone.LineNumber.ToString(), _searchText))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool Contains(string value, string search)
@@ -659,13 +768,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 string? fileFilter = GetSelectedFile();
                 string status = _cboStatus.SelectedItem as string ?? StatusAll;
 
-                foreach (int rowIndex in file.RowIndices)
-                {
-                    if (!MatchesRow(_rows[rowIndex], fileFilter, status))
-                    {
-                        continue;
-                    }
+                IEnumerable<int> matches = file.RowIndices
+                    .Where(rowIndex => MatchesRow(rowIndex, fileFilter, status))
+                    .OrderBy(rowIndex => _rows[rowIndex].LineNumber)
+                    .ThenBy(rowIndex => DisplayWord(_rows[rowIndex]), StringComparer.OrdinalIgnoreCase);
 
+                foreach (int rowIndex in matches)
+                {
                     _visible.Add(OutlineRow.Match(sportIndex, fileIndex, rowIndex));
                 }
             }
@@ -693,6 +802,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             ColSelect => string.Empty,
             ColState => GetStateText(outline),
             ColItem => GetItemText(outline),
+            ColLine => GetLineText(outline),
             ColFile => GetFileText(outline),
             ColSummary => GetSummaryText(outline),
             _ => string.Empty
@@ -746,9 +856,31 @@ public partial class AnalysisReviewControl : ReviewUserControl
         return outline.Kind switch
         {
             OutlineKind.Sport => $"{Glyph(_sports[outline.SportIndex].Expanded)}  {_sports[outline.SportIndex].Name}",
-            OutlineKind.File => $"{Glyph(_sports[outline.SportIndex].Files[outline.FileIndex].Expanded)}  {_sports[outline.SportIndex].Files[outline.FileIndex].Name}",
-            _ => _rows[outline.RowIndex].Found
+            OutlineKind.File => $"{Glyph(_sports[outline.SportIndex].Files[outline.FileIndex].Expanded)}  {DisplayFileName(_sports[outline.SportIndex].Files[outline.FileIndex].Name)}",
+            _ => DisplayWord(_rows[outline.RowIndex])
         };
+    }
+
+    private static string DisplayWord(AnalysisTableRow row)
+    {
+        return string.IsNullOrWhiteSpace(row.Word) ? row.Found : row.Word;
+    }
+
+    private static string DisplayFileName(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return path;
+        }
+
+        try
+        {
+            return Path.GetFileName(path.Replace('/', Path.DirectorySeparatorChar));
+        }
+        catch (ArgumentException)
+        {
+            return path;
+        }
     }
 
     private static string Glyph(bool expanded)
@@ -763,18 +895,57 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return string.Empty;
         }
 
-        return _rows[outline.RowIndex].File;
+        return DisplayFileName(_rows[outline.RowIndex].File);
+    }
+
+    private string GetLineText(OutlineRow outline)
+    {
+        if (outline.Kind != OutlineKind.Match)
+        {
+            return string.Empty;
+        }
+
+        int line = _rows[outline.RowIndex].LineNumber;
+        return line > 0 ? line.ToString() : string.Empty;
     }
 
     private string GetSummaryText(OutlineRow outline)
     {
         if (outline.Kind == OutlineKind.Match)
         {
-            return string.Empty;
+            return GetMatchSummary(_rows[outline.RowIndex], outline.RowIndex);
         }
 
         (int total, int accurate, int denied) = GetCounts(outline);
         return $"{total:N0} matches  ·  {accurate:N0} accurate  ·  {denied:N0} denied";
+    }
+
+    private string GetMatchSummary(AnalysisTableRow row, int rowIndex)
+    {
+        int[] clones = GetClones(rowIndex);
+        var terms = clones
+            .Select(index => _rows[index].Found)
+            .Where(found => !string.IsNullOrWhiteSpace(found))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(found => found, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (terms.Count == 0)
+        {
+            return row.LineNumber > 0 ? $"line {row.LineNumber}" : string.Empty;
+        }
+
+        if (clones.Length == 1 &&
+            terms.Count == 1 &&
+            string.Equals(terms[0], DisplayWord(row), StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        string termList = string.Join(", ", terms);
+        return clones.Length > 1
+            ? $"{termList}  ·  {clones.Length} hits"
+            : termList;
     }
 
     private (int total, int accurate, int denied) GetCounts(OutlineRow outline)
@@ -852,6 +1023,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
             };
             e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
         }
+        else if (column == ColLine)
+        {
+            e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            e.CellStyle.ForeColor = DarkMode.TextSecondary;
+            e.CellStyle.SelectionForeColor = DarkMode.TextSecondary;
+        }
         else
         {
             e.CellStyle.ForeColor = DarkMode.TextSecondary;
@@ -928,15 +1105,16 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void OpenInVsCode(AnalysisTableRow row)
     {
-        OpenInVsCode(row.File, row.Found);
+        string highlight = string.IsNullOrWhiteSpace(row.Word) ? row.Found : row.Word;
+        OpenInVsCode(row.File, highlight, row.LineNumber);
     }
 
-    private void OpenInVsCode(string path, string? searchText = null)
+    private void OpenInVsCode(string path, string? searchText = null, int lineNumber = 0)
     {
         Form? form = FindForm();
         try
         {
-            int selectLength = VsCodeLauncher.Open(path, searchText);
+            int selectLength = VsCodeLauncher.Open(path, searchText, lineNumber);
             ScheduleHighlightThenRestore(form, selectLength);
         }
         catch (Exception ex)
@@ -1268,7 +1446,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
             foreach (int rowIndex in file.RowIndices)
             {
-                if (MatchesRow(_rows[rowIndex], fileFilter, status))
+                if (MatchesRow(rowIndex, fileFilter, status))
                 {
                     SetRowDecision(rowIndex, value);
                 }
@@ -1284,7 +1462,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         foreach (int rowIndex in sport.RowIndices)
         {
-            if (MatchesRow(_rows[rowIndex], fileFilter, status))
+            if (MatchesRow(rowIndex, fileFilter, status))
             {
                 SetRowDecision(rowIndex, sportValue);
             }
@@ -1318,30 +1496,44 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void SetRowDecision(int rowIndex, ReviewDecision decision)
     {
-        AnalysisTableRow row = _rows[rowIndex];
-        if (row.Decision == decision)
+        foreach (int cloneIndex in GetClones(rowIndex))
         {
-            return;
-        }
+            AnalysisTableRow row = _rows[cloneIndex];
+            if (row.Decision == decision)
+            {
+                continue;
+            }
 
-        ReviewDecision previous = row.Decision;
-        if (_pendingUndo != null)
-        {
-            _pendingUndo.Add((rowIndex, previous));
-        }
+            ReviewDecision previous = row.Decision;
+            if (_pendingUndo != null)
+            {
+                _pendingUndo.Add((cloneIndex, previous));
+            }
 
-        row.Decision = decision;
+            row.Decision = decision;
 
-        SportNode sport = _sports[_sportIndexByRow[rowIndex]];
-        AddDecision(sport, previous, -1);
-        AddDecision(sport, decision, 1);
+            if (!_countsInTree[cloneIndex])
+            {
+                continue;
+            }
 
-        int fileIndex = _fileIndexByRow[rowIndex];
-        if (fileIndex >= 0 && fileIndex < sport.Files.Count)
-        {
-            FileNode file = sport.Files[fileIndex];
-            AddDecision(file, previous, -1);
-            AddDecision(file, decision, 1);
+            int sportIndex = _sportIndexByRow[cloneIndex];
+            if (sportIndex < 0 || sportIndex >= _sports.Count)
+            {
+                continue;
+            }
+
+            SportNode sport = _sports[sportIndex];
+            AddDecision(sport, previous, -1);
+            AddDecision(sport, decision, 1);
+
+            int fileIndex = _fileIndexByRow[cloneIndex];
+            if (fileIndex >= 0 && fileIndex < sport.Files.Count)
+            {
+                FileNode file = sport.Files[fileIndex];
+                AddDecision(file, previous, -1);
+                AddDecision(file, decision, 1);
+            }
         }
     }
 
@@ -1434,10 +1626,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private int FindVisibleMatch(int rowIndex)
     {
+        HashSet<int> clones = GetClones(rowIndex).ToHashSet();
         for (int i = 0; i < _visible.Count; i++)
         {
             OutlineRow outline = _visible[i];
-            if (outline.Kind == OutlineKind.Match && outline.RowIndex == rowIndex)
+            if (outline.Kind == OutlineKind.Match && clones.Contains(outline.RowIndex))
             {
                 return i;
             }
@@ -1477,7 +1670,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
                 foreach (int rowIndex in sport.RowIndices)
                 {
-                    if (MatchesRow(_rows[rowIndex], fileFilter, status))
+                    if (MatchesRow(rowIndex, fileFilter, status))
                     {
                         SetRowDecision(rowIndex, decision);
                     }
@@ -1511,7 +1704,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
             foreach (int rowIndex in sport.RowIndices)
             {
-                if (!MatchesRow(_rows[rowIndex], fileFilter, status) ||
+                if (!MatchesRow(rowIndex, fileFilter, status) ||
                     _rows[rowIndex].Decision != ReviewDecision.Pending)
                 {
                     continue;
@@ -1896,8 +2089,21 @@ public partial class AnalysisReviewControl : ReviewUserControl
         public int FilteredTotal { get; set; }
         public int FilteredAccurate { get; set; }
         public int FilteredDenied { get; set; }
+        public HashSet<CloneKey> SeenCloneKeys { get; } = new();
         public List<int> RowIndices { get; } = new();
         public List<FileNode> Files { get; } = new();
+    }
+
+    private readonly record struct CloneKey(string File, int Line, string Word)
+    {
+        public static CloneKey From(AnalysisTableRow row)
+        {
+            string word = string.IsNullOrWhiteSpace(row.Word) ? row.Found : row.Word;
+            return new CloneKey(
+                (row.File ?? string.Empty).ToUpperInvariant(),
+                row.LineNumber,
+                (word ?? string.Empty).ToUpperInvariant());
+        }
     }
 
     private sealed class FileNode

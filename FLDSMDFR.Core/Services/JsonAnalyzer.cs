@@ -62,6 +62,8 @@ public class JsonAnalyzer
                         File = fileResult.File,
                         Sport = term.Sport,
                         Found = term.Found,
+                        Word = string.IsNullOrWhiteSpace(term.Word) ? term.Found : term.Word,
+                        LineNumber = term.Line,
                         Decision = term.IsAccurate
                             ? ReviewDecision.Accurate
                             : ReviewDecision.Pending

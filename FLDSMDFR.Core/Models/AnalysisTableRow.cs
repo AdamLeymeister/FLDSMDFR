@@ -5,7 +5,12 @@ public class AnalysisTableRow
     public string Sport { get; set; } = string.Empty;
 
     public string Found { get; set; } = string.Empty;
+
+    public string Word { get; set; } = string.Empty;
+
     public string File { get; set; } = string.Empty;
+
+    public int LineNumber { get; set; }
 
     public ReviewDecision Decision { get; set; } = ReviewDecision.Pending;
 
