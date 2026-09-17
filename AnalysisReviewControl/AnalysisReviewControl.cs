@@ -12,6 +12,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private const string ColLine = "Line";
     private const string ColFile = "File";
     private const string ColSummary = "Summary";
+    private const string ColContext = "Context";
 
     private const string AllSports = "(All sports)";
     private const string AllFiles = "(All files)";
@@ -47,10 +48,15 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly Button _btnUndo = new();
     private readonly Button _btnNext = new();
     private readonly Button _btnCollapse = new();
+    private readonly Button _btnFocus = new();
     private readonly Label _lblStats = new();
     private readonly Label _lblHelp = new();
     private readonly ReviewGrid _grid = new();
     private readonly ThemedScrollHost _scrollHost;
+    private readonly SplitContainer _split = new();
+    private readonly SourcePreviewPanel _preview = new();
+    private readonly FocusReviewPanel _focusPanel = new();
+    private readonly SourceTextCache _sourceCache = new();
     private readonly System.Windows.Forms.Timer _searchDebounce = new();
     private readonly Stack<List<(int RowIndex, ReviewDecision Previous)>> _undoStack = new();
     private List<(int RowIndex, ReviewDecision Previous)>? _pendingUndo;
@@ -60,6 +66,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private bool _updatingUi;
     private string _searchText = string.Empty;
     private readonly List<DateTime> _reviewTimes = new();
+    private bool _focusMode;
+    private int _focusRowIndex = -1;
+    private bool _splitLaidOut;
 
     public event EventHandler? ImportClicked;
 
@@ -122,7 +131,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             StatusAccurate,
             StatusDenied
         });
-        _cboStatus.SelectedIndex = 0;
+        _cboStatus.SelectedIndex = 1;
         _cboSport.Items.Add(AllSports);
         _cboSport.SelectedIndex = 0;
         _cboFile.Items.Add(AllFiles);
@@ -136,6 +145,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 92);
         StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 100);
         StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 118);
+        StyleActionButton(_btnFocus, "Focus", DarkMode.Primary, DarkMode.Background, 92);
         UpdateUndoButton();
         UpdateExportButton();
 
@@ -241,7 +251,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Width = 580,
+            Width = 680,
             Height = 36,
             BackColor = DarkMode.Surface,
             Margin = Padding.Empty
@@ -252,6 +262,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         panel.Controls.Add(_btnUndo);
         panel.Controls.Add(_btnNext);
         panel.Controls.Add(_btnCollapse);
+        panel.Controls.Add(_btnFocus);
         return panel;
     }
 
@@ -306,7 +317,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "WASD / ,aoe move   G select group   H/J confirm   T/K deny";
+        _lblHelp.Text = "Y confirm   N deny   F3 next   Focus for one hit at a time";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -317,6 +328,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.ResolveRowBand = GetRowBand;
         _grid.ResolveExpanded = GetRowExpanded;
         _grid.ResolveSelectableGroup = ExpandAndCollectGroupRows;
+        _grid.ResolveSnippetHighlight = GetSnippetHighlight;
+        _grid.ResolveStickyHeader = GetStickyHeader;
         _scrollHost.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
         _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
@@ -324,10 +337,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _grid.Columns.Add(CreateTextColumn(ColSelect, "", 48, 48));
         _grid.Columns.Add(CreateTextColumn(ColState, "Status", 120, 108));
-        _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 280, 140));
+        _grid.Columns.Add(CreateTextColumn(ColItem, "Item", 200, 120));
         _grid.Columns.Add(CreateTextColumn(ColLine, "Line", 72, 56));
+        _grid.Columns.Add(CreateTextColumn(ColContext, "Source", 320, 160));
         _grid.Columns.Add(CreateTextColumn(ColFile, "File", 180, 100));
-        _grid.Columns.Add(CreateTextColumn(ColSummary, "Summary", 240, 140));
+        _grid.Columns.Add(CreateTextColumn(ColSummary, "Match", 200, 120));
 
         _grid.Columns[ColSelect].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _grid.Columns[ColSelect].Width = 48;
@@ -339,9 +353,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.Columns[ColLine].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _grid.Columns[ColLine].Width = 72;
         _grid.Columns[ColLine].FillWeight = 1;
-        _grid.Columns[ColItem].FillWeight = 52;
+        _grid.Columns[ColItem].FillWeight = 22;
         _grid.Columns[ColFile].Visible = false;
-        _grid.Columns[ColSummary].FillWeight = 38;
+        _grid.Columns[ColContext].FillWeight = 40;
+        _grid.Columns[ColSummary].FillWeight = 24;
     }
 
     private void ConfigureCard()
@@ -352,12 +367,78 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _card.BackdropColor = DarkMode.Background;
         _card.FillColor = DarkMode.Surface;
 
-        _card.Controls.Add(_scrollHost);
+        _split.Dock = DockStyle.Fill;
+        _split.SplitterWidth = 6;
+        _split.BorderStyle = BorderStyle.None;
+        _split.BackColor = DarkMode.Border;
+        _split.Panel1.BackColor = DarkMode.Surface;
+        _split.Panel2.BackColor = DarkMode.Surface;
+        _split.Panel1.Padding = new Padding(0, 0, 6, 0);
+        _split.Panel2.Padding = new Padding(6, 0, 0, 0);
+        _split.Panel1.Controls.Add(_scrollHost);
+        _split.Panel2.Controls.Add(_preview);
+
+        _focusPanel.Dock = DockStyle.Fill;
+
+        var work = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DarkMode.Surface
+        };
+        work.Controls.Add(_split);
+        work.Controls.Add(_focusPanel);
+        _split.BringToFront();
+
+        _card.Controls.Add(work);
         _card.Controls.Add(_pnlToolbar);
         _card.Controls.Add(_pnlStatus);
-        _scrollHost.BringToFront();
+        work.BringToFront();
 
         Controls.Add(_card);
+        Load += (_, _) => LayoutSplit(initial: true);
+        _split.SizeChanged += (_, _) => LayoutSplit(initial: false);
+    }
+
+    private void LayoutSplit(bool initial)
+    {
+        if (_split.IsDisposed || _split.Width < 80)
+        {
+            return;
+        }
+
+        int splitter = Math.Max(_split.SplitterWidth, 1);
+        int available = _split.Width - splitter;
+        if (available < 50)
+        {
+            return;
+        }
+
+        int panel1Min = Math.Min(280, Math.Max(40, available / 3));
+        int panel2Min = Math.Min(240, Math.Max(40, available / 4));
+        if (panel1Min + panel2Min > available)
+        {
+            panel1Min = Math.Max(25, available / 2);
+            panel2Min = Math.Max(25, available - panel1Min);
+        }
+
+        try
+        {
+            _split.Panel1MinSize = panel1Min;
+            _split.Panel2MinSize = panel2Min;
+
+            if (initial || !_splitLaidOut)
+            {
+                int distance = Math.Clamp(
+                    _split.Width - Math.Min(360, available / 3 + 40),
+                    panel1Min,
+                    available - panel2Min);
+                _split.SplitterDistance = distance;
+                _splitLaidOut = true;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
     }
 
     private static DataGridViewTextBoxColumn CreateTextColumn(
@@ -423,6 +504,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _btnUndo.Click += (_, _) => UndoLast();
         _btnNext.Click += (_, _) => JumpToNextReview();
         _btnCollapse.Click += (_, _) => CollapseAll();
+        _btnFocus.Click += (_, _) => ToggleFocusMode();
 
         _grid.CellValueNeeded += Grid_CellValueNeeded;
         _grid.CellFormatting += Grid_CellFormatting;
@@ -431,6 +513,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.KeyDown += Grid_KeyDown;
         _grid.DataError += (_, e) => e.ThrowException = false;
         _grid.Paint += Grid_Paint;
+        _grid.SelectionChanged += (_, _) => RefreshPreview();
+        _grid.CurrentCellChanged += (_, _) => RefreshPreview();
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -439,6 +523,37 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             UndoLast();
             return true;
+        }
+
+        if (!_txtSearch.ContainsFocus)
+        {
+            Keys key = keyData & Keys.KeyCode;
+            bool control = (keyData & Keys.Control) == Keys.Control;
+            bool shift = (keyData & Keys.Shift) == Keys.Shift;
+
+            if (!control && !shift && key is Keys.Y or Keys.J or Keys.H)
+            {
+                ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
+                return true;
+            }
+
+            if (!control && !shift && key is Keys.N or Keys.K or Keys.T)
+            {
+                ReviewSelected(decision: ReviewDecision.Denied, advance: true);
+                return true;
+            }
+
+            if (key == Keys.F3)
+            {
+                JumpToNextReview();
+                return true;
+            }
+
+            if (_focusMode && key == Keys.Escape)
+            {
+                SetFocusMode(false);
+                return true;
+            }
         }
 
         if (_grid.Focused || _grid.ContainsFocus)
@@ -471,18 +586,25 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _undoStack.Clear();
         _pendingUndo = null;
         _reviewTimes.Clear();
+        _focusRowIndex = -1;
+        LoadSourceLines();
         BuildSportIndex();
         RebuildSportFilter();
         RebuildFileFilter();
+        ExpandFirstPendingFile();
         ApplyFilterAndRebuild(keepCurrent: false);
         UpdateUndoButton();
         UpdateExportButton();
+        RefreshFocusUi();
 
         if (_visible.Count > 0)
         {
-            SelectVisibleRow(0);
+            int firstHit = FindNextHit(-1);
+            SelectVisibleRow(firstHit >= 0 ? firstHit : 0);
             _grid.Focus();
         }
+
+        RefreshPreview();
     }
 
     private void BuildSportIndex()
@@ -674,6 +796,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         UpdateStats();
+        RefreshPreview();
+        RefreshFocusUi();
     }
 
     private void RefreshFilterCounts()
@@ -820,7 +944,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 Contains(clone.Found, _searchText) ||
                 Contains(clone.Word, _searchText) ||
                 Contains(clone.File, _searchText) ||
-                Contains(clone.LineNumber.ToString(), _searchText))
+                Contains(clone.LineNumber.ToString(), _searchText) ||
+                Contains(clone.LineText, _searchText))
             {
                 return true;
             }
@@ -904,6 +1029,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             ColState => GetStateText(outline),
             ColItem => GetItemText(outline),
             ColLine => GetLineText(outline),
+            ColContext => GetContextText(outline),
             ColFile => GetFileText(outline),
             ColSummary => GetSummaryText(outline),
             _ => string.Empty
@@ -974,6 +1100,16 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
     }
 
+    private string GetContextText(OutlineRow outline)
+    {
+        if (outline.Kind != OutlineKind.Match)
+        {
+            return string.Empty;
+        }
+
+        return _rows[outline.RowIndex].LineText;
+    }
+
     private string GetFileText(OutlineRow outline)
     {
         if (outline.Kind != OutlineKind.Match)
@@ -1008,6 +1144,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private string GetMatchSummary(AnalysisTableRow row, int rowIndex)
     {
+        return GetMatchReason(row, rowIndex);
+    }
+
+    private string GetMatchReason(AnalysisTableRow row, int rowIndex)
+    {
+        string word = DisplayWord(row);
         int[] clones = GetClones(rowIndex);
         var terms = clones
             .Select(index => _rows[index].Found)
@@ -1018,20 +1160,18 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         if (terms.Count == 0)
         {
-            return row.LineNumber > 0 ? $"line {row.LineNumber}" : string.Empty;
+            return "exact match";
         }
 
-        if (clones.Length == 1 &&
-            terms.Count == 1 &&
-            string.Equals(terms[0], DisplayWord(row), StringComparison.OrdinalIgnoreCase))
+        if (terms.Count == 1 &&
+            string.Equals(terms[0], word, StringComparison.OrdinalIgnoreCase))
         {
-            return string.Empty;
+            return IsFuzzyToken(word) ? "fuzzy token" : "exact match";
         }
 
-        string termList = string.Join(", ", terms);
-        return clones.Length > 1
-            ? $"{termList}  ·  {clones.Length} hits"
-            : termList;
+        string searched = string.Join(", ", terms.Select(term => $"`{term}`"));
+        string suffix = clones.Length > 1 ? $"  ·  {clones.Length} hits" : string.Empty;
+        return $"searched {searched} → `{word}`{suffix}";
     }
 
     private bool IsGroupedHit(OutlineRow outline)
@@ -1123,6 +1263,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
             e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             e.CellStyle.ForeColor = DarkMode.TextSecondary;
             e.CellStyle.SelectionForeColor = DarkMode.TextSecondary;
+        }
+        else if (column == ColContext)
+        {
+            e.CellStyle.ForeColor = DarkMode.TextSecondary;
+            e.CellStyle.SelectionForeColor = DarkMode.TextPrimary;
+            e.CellStyle.Font = Font;
         }
         else if (column == ColSummary)
         {
@@ -1485,6 +1631,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             FileNode file = _sports[outline.SportIndex].Files[outline.FileIndex];
             file.Expanded = !file.Expanded;
+            if (file.Expanded)
+            {
+                CollapseOtherFiles(outline.SportIndex, outline.FileIndex);
+            }
         }
         else
         {
@@ -1576,6 +1726,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
         bool toggle = false,
         bool advance = false)
     {
+        if (_focusMode)
+        {
+            ReviewFocusHit(decision, toggle, advance);
+            return;
+        }
+
         List<int> selected = GetSelectedVisibleRows();
         if (selected.Count == 0)
         {
@@ -1591,9 +1747,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
         CommitUndoBatch();
 
+        ExpandNextFileIfComplete(first);
         RefreshFilterCounts();
         RebuildVisible();
         UpdateStats();
+        RefreshPreview();
+        RefreshFocusUi();
 
         int keep = FindVisibleIndex(first);
         if (keep < 0)
@@ -1655,12 +1814,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         }
 
         SportNode sport = _sports[sportIndex];
-        sport.Expanded = true;
-        EnsureFiles(sport);
-        if (fileIndex >= 0 && fileIndex < sport.Files.Count)
-        {
-            sport.Files[fileIndex].Expanded = true;
-        }
+        ExpandOnlyFile(sportIndex, fileIndex);
 
         RebuildVisible();
         UpdateStats();
@@ -1760,7 +1914,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
     {
         return file.RowIndices
             .Where(index => MatchesRow(index, fileFilter, status))
-            .OrderBy(index => _rows[index].LineNumber)
+            .OrderBy(SuspicionRank)
+            .ThenBy(index => _rows[index].LineNumber)
             .ThenBy(index => DisplayWord(_rows[index]), StringComparer.OrdinalIgnoreCase)
             .ThenBy(index => index)
             .ToList();
@@ -1768,7 +1923,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private int CompareMatchOrder(int left, int right)
     {
-        int cmp = _rows[left].LineNumber.CompareTo(_rows[right].LineNumber);
+        int cmp = SuspicionRank(left).CompareTo(SuspicionRank(right));
+        if (cmp != 0)
+        {
+            return cmp;
+        }
+
+        cmp = _rows[left].LineNumber.CompareTo(_rows[right].LineNumber);
         if (cmp != 0)
         {
             return cmp;
@@ -1978,6 +2139,14 @@ public partial class AnalysisReviewControl : ReviewUserControl
         RebuildVisible();
         UpdateStats();
         UpdateUndoButton();
+        RefreshPreview();
+
+        if (_focusMode)
+        {
+            _focusRowIndex = batch[0].RowIndex;
+            RefreshFocusUi();
+            return;
+        }
 
         int vis = FindVisibleMatch(batch[0].RowIndex);
         if (vis < 0 && _visible.Count > 0)
@@ -2058,10 +2227,19 @@ public partial class AnalysisReviewControl : ReviewUserControl
         CommitUndoBatch();
 
         UpdateStats();
+        RefreshPreview();
+        RefreshFocusUi();
     }
 
     private void JumpToNextReview()
     {
+        if (_focusMode)
+        {
+            MoveFocusToNextPending(skipCurrent: true);
+            RefreshFocusUi();
+            return;
+        }
+
         string? fileFilter = GetSelectedFile();
         string status = _cboStatus.SelectedItem as string ?? StatusAll;
 
@@ -2077,10 +2255,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 continue;
             }
 
-            foreach (int rowIndex in sport.RowIndices)
+            EnsureFiles(sport);
+
+            foreach (int rowIndex in GetOrderedPending(sport, fileFilter, status))
             {
-                if (!MatchesRow(rowIndex, fileFilter, status) ||
-                    _rows[rowIndex].Decision != ReviewDecision.Pending)
+                if (_rows[rowIndex].Decision != ReviewDecision.Pending)
                 {
                     continue;
                 }
@@ -2120,15 +2299,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
                     }
                 }
 
-                sport.Expanded = true;
-                EnsureFiles(sport);
-                int fileIndex = _fileIndexByRow[rowIndex];
-                if (fileIndex >= 0)
-                {
-                    sport.Files[fileIndex].Expanded = true;
-                }
-
+                ExpandOnlyFile(sportIndex, _fileIndexByRow[rowIndex]);
                 RebuildVisible();
+                int fileIndex = _fileIndexByRow[rowIndex];
                 int visibleIndex = fileIndex >= 0
                     ? FindVisibleIndex(OutlineRow.Match(sportIndex, fileIndex, rowIndex))
                     : -1;
@@ -2139,7 +2312,21 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 }
 
                 UpdateStats();
+                RefreshPreview();
+                RefreshFocusUi();
                 return;
+            }
+        }
+    }
+
+    private IEnumerable<int> GetOrderedPending(SportNode sport, string? fileFilter, string status)
+    {
+        EnsureFiles(sport);
+        foreach (FileNode file in sport.Files)
+        {
+            foreach (int rowIndex in GetOrderedMatches(file, fileFilter, status))
+            {
+                yield return rowIndex;
             }
         }
     }
@@ -2419,9 +2606,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         RebuildFileFilter();
         _updatingUi = true;
-        if (_cboStatus.Items.Count > 0)
+        if (_cboStatus.Items.Count > 1)
         {
-            _cboStatus.SelectedIndex = 0;
+            _cboStatus.SelectedIndex = 1;
         }
 
         _updatingUi = false;
@@ -2511,6 +2698,400 @@ public partial class AnalysisReviewControl : ReviewUserControl
         button.Margin = new Padding(0, 0, 8, 0);
         button.TabStop = false;
         button.UseVisualStyleBackColor = false;
+    }
+
+    private void LoadSourceLines()
+    {
+        _sourceCache.Clear();
+        _sourceCache.Load(_rows.Select(row => row.File));
+        foreach (AnalysisTableRow row in _rows)
+        {
+            row.LineText = _sourceCache.GetLine(row.File, row.LineNumber);
+        }
+    }
+
+    private int SuspicionRank(int rowIndex)
+    {
+        AnalysisTableRow row = _rows[rowIndex];
+        string word = DisplayWord(row);
+        if (IsFuzzyToken(word) || IsFuzzyToken(row.Found))
+        {
+            return 0;
+        }
+
+        if (GetClones(rowIndex).Length > 1)
+        {
+            return 1;
+        }
+
+        if (!string.Equals(row.Found, word, StringComparison.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    private static bool IsFuzzyToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        foreach (char c in value)
+        {
+            if (!char.IsLetterOrDigit(c) && c != '\'')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ExpandFirstPendingFile()
+    {
+        for (int sportIndex = 0; sportIndex < _sports.Count; sportIndex++)
+        {
+            SportNode sport = _sports[sportIndex];
+            EnsureFiles(sport);
+            for (int fileIndex = 0; fileIndex < sport.Files.Count; fileIndex++)
+            {
+                if (FileHasPending(sport.Files[fileIndex]))
+                {
+                    ExpandOnlyFile(sportIndex, fileIndex);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void CollapseOtherFiles(int sportIndex, int keepFileIndex)
+    {
+        ExpandOnlyFile(sportIndex, keepFileIndex);
+    }
+
+    private void ExpandOnlyFile(int sportIndex, int fileIndex)
+    {
+        if (sportIndex < 0 || sportIndex >= _sports.Count)
+        {
+            return;
+        }
+
+        for (int s = 0; s < _sports.Count; s++)
+        {
+            SportNode sport = _sports[s];
+            EnsureFiles(sport);
+            sport.Expanded = s == sportIndex;
+            for (int f = 0; f < sport.Files.Count; f++)
+            {
+                sport.Files[f].Expanded = s == sportIndex && f == fileIndex;
+            }
+        }
+    }
+
+    private void ExpandNextFileIfComplete(OutlineRow reviewed)
+    {
+        if (reviewed.Kind == OutlineKind.Sport)
+        {
+            return;
+        }
+
+        int sportIndex = reviewed.SportIndex;
+        int fileIndex = reviewed.Kind == OutlineKind.Match
+            ? _fileIndexByRow[reviewed.RowIndex]
+            : reviewed.FileIndex;
+
+        if (sportIndex < 0 || sportIndex >= _sports.Count)
+        {
+            return;
+        }
+
+        SportNode sport = _sports[sportIndex];
+        EnsureFiles(sport);
+        if (fileIndex < 0 || fileIndex >= sport.Files.Count)
+        {
+            return;
+        }
+
+        if (FileHasPending(sport.Files[fileIndex]))
+        {
+            return;
+        }
+
+        for (int s = sportIndex; s < _sports.Count; s++)
+        {
+            SportNode nextSport = _sports[s];
+            EnsureFiles(nextSport);
+            int startFile = s == sportIndex ? fileIndex + 1 : 0;
+            for (int f = startFile; f < nextSport.Files.Count; f++)
+            {
+                if (FileHasPending(nextSport.Files[f]))
+                {
+                    ExpandOnlyFile(s, f);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static bool FileHasPending(FileNode file)
+    {
+        return file.RowIndices.Count - file.Accurate - file.Denied > 0;
+    }
+
+    private string? GetSnippetHighlight(int visibleIndex)
+    {
+        if (visibleIndex < 0 || visibleIndex >= _visible.Count)
+        {
+            return null;
+        }
+
+        OutlineRow outline = _visible[visibleIndex];
+        if (outline.Kind != OutlineKind.Match)
+        {
+            return null;
+        }
+
+        return GetHighlightForRow(_rows[outline.RowIndex]);
+    }
+
+    private static string GetHighlightForRow(AnalysisTableRow row)
+    {
+        string word = DisplayWord(row);
+        return string.IsNullOrWhiteSpace(word) ? row.Found : word;
+    }
+
+    private StickyOverlay? GetStickyHeader(int firstVisible)
+    {
+        if (firstVisible < 0 || firstVisible >= _visible.Count)
+        {
+            return null;
+        }
+
+        OutlineRow first = _visible[firstVisible];
+        if (first.Kind != OutlineKind.Match)
+        {
+            return null;
+        }
+
+        FileNode file = _sports[first.SportIndex].Files[first.FileIndex];
+        string state = file.Accurate + file.Denied == file.RowIndices.Count && file.RowIndices.Count > 0
+            ? "Complete"
+            : "Incomplete";
+
+        return new StickyOverlay
+        {
+            Title = DisplayFileName(file.Name),
+            State = state,
+            Summary = $"{file.FilteredTotal:N0} shown"
+        };
+    }
+
+    private void ToggleFocusMode()
+    {
+        SetFocusMode(!_focusMode);
+    }
+
+    private void SetFocusMode(bool enabled)
+    {
+        _focusMode = enabled;
+        _split.Visible = !enabled;
+        _focusPanel.Visible = enabled;
+        _btnFocus.Text = enabled ? "Outline" : "Focus";
+
+        if (enabled)
+        {
+            OutlineRow? current = GetCurrentOutline();
+            _focusRowIndex = current?.Kind == OutlineKind.Match
+                ? current.Value.RowIndex
+                : -1;
+            if (_focusRowIndex < 0 || _rows[_focusRowIndex].Decision != ReviewDecision.Pending)
+            {
+                MoveFocusToNextPending(skipCurrent: false);
+            }
+
+            RefreshFocusUi();
+            _focusPanel.BringToFront();
+            _focusPanel.Focus();
+        }
+        else
+        {
+            _grid.Focus();
+            RefreshPreview();
+        }
+    }
+
+    private void ReviewFocusHit(ReviewDecision decision, bool toggle, bool advance)
+    {
+        if (_focusRowIndex < 0 || _focusRowIndex >= _rows.Length)
+        {
+            MoveFocusToNextPending(skipCurrent: false);
+            RefreshFocusUi();
+            return;
+        }
+
+        ReviewDecision value = toggle ? NextDecision(_rows[_focusRowIndex].Decision) : decision;
+        OutlineRow from = new()
+        {
+            Kind = OutlineKind.Match,
+            SportIndex = _sportIndexByRow[_focusRowIndex],
+            FileIndex = _fileIndexByRow[_focusRowIndex],
+            RowIndex = _focusRowIndex
+        };
+
+        BeginUndoBatch();
+        SetRowDecision(_focusRowIndex, value);
+        CommitUndoBatch();
+        ExpandNextFileIfComplete(from);
+        RefreshFilterCounts();
+        RebuildVisible();
+        UpdateStats();
+
+        if (advance)
+        {
+            MoveFocusToNextPending(skipCurrent: true);
+        }
+
+        RefreshFocusUi();
+    }
+
+    private void MoveFocusToNextPending(bool skipCurrent)
+    {
+        List<int> pending = CollectOrderedPending();
+        if (pending.Count == 0)
+        {
+            _focusRowIndex = -1;
+            return;
+        }
+
+        int at = pending.IndexOf(_focusRowIndex);
+        int next = skipCurrent
+            ? at >= 0 && at + 1 < pending.Count ? at + 1 : 0
+            : at >= 0 ? at : 0;
+
+        if (skipCurrent && at < 0)
+        {
+            next = 0;
+        }
+
+        if (skipCurrent && at >= 0 && at + 1 >= pending.Count)
+        {
+            _focusRowIndex = -1;
+            return;
+        }
+
+        _focusRowIndex = pending[next];
+        int sportIndex = _sportIndexByRow[_focusRowIndex];
+        int fileIndex = _fileIndexByRow[_focusRowIndex];
+        ExpandOnlyFile(sportIndex, fileIndex);
+    }
+
+    private List<int> CollectOrderedPending()
+    {
+        var pending = new List<int>();
+        string? fileFilter = GetSelectedFile();
+        foreach (SportNode sport in _sports)
+        {
+            if (GetSelectedSport() is string sportFilter &&
+                !string.Equals(sport.Name, sportFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            EnsureFiles(sport);
+            foreach (int rowIndex in GetOrderedPending(sport, fileFilter, StatusReview))
+            {
+                if (_rows[rowIndex].Decision == ReviewDecision.Pending)
+                {
+                    pending.Add(rowIndex);
+                }
+            }
+        }
+
+        return pending;
+    }
+
+    private void RefreshPreview()
+    {
+        if (_focusMode)
+        {
+            return;
+        }
+
+        OutlineRow? current = GetCurrentOutline();
+        if (current?.Kind != OutlineKind.Match)
+        {
+            _preview.ShowEmpty("Select a hit to preview the source line.");
+            return;
+        }
+
+        ShowPreview(_preview, _rows[current.Value.RowIndex], current.Value.RowIndex);
+    }
+
+    private void RefreshFocusUi()
+    {
+        if (!_focusMode)
+        {
+            return;
+        }
+
+        int remaining = CountPending();
+        if (_focusRowIndex < 0 || _focusRowIndex >= _rows.Length)
+        {
+            _focusPanel.ShowEmpty(remaining == 0
+                ? "No hits left to review. Press Escape or Outline to return."
+                : "No pending hit in the current filters.");
+            return;
+        }
+
+        AnalysisTableRow row = _rows[_focusRowIndex];
+        string progress = remaining == 1
+            ? "1 hit left"
+            : $"{remaining:N0} hits left  ·  Y confirm   N deny";
+        _focusPanel.ShowHit(
+            DisplayWord(row),
+            DisplayFileName(row.File),
+            row.LineNumber,
+            GetMatchReason(row, _focusRowIndex),
+            GetHighlightForRow(row),
+            _sourceCache.GetLines(row.File),
+            progress);
+    }
+
+    private void ShowPreview(SourcePreviewPanel preview, AnalysisTableRow row, int rowIndex)
+    {
+        preview.ShowHit(
+            DisplayFileName(row.File),
+            row.LineNumber,
+            GetMatchReason(row, rowIndex),
+            GetHighlightForRow(row),
+            _sourceCache.GetLines(row.File));
+    }
+
+    private int CountPending()
+    {
+        int pending = 0;
+        string? fileFilter = GetSelectedFile();
+        foreach (SportNode sport in _sports)
+        {
+            if (GetSelectedSport() is string sportFilter &&
+                !string.Equals(sport.Name, sportFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (int rowIndex in sport.RowIndices)
+            {
+                if (MatchesRow(rowIndex, fileFilter, StatusReview))
+                {
+                    pending++;
+                }
+            }
+        }
+
+        return pending;
     }
 
     private enum OutlineKind

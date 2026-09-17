@@ -16,6 +16,8 @@ public class AnalysisTableRow
 
     public int ImportOrder { get; set; }
 
+    public string LineText { get; set; } = string.Empty;
+
     public bool OriginalIsAccurate { get; set; }
 
     public ReviewDecision Decision { get; set; } = ReviewDecision.Pending;

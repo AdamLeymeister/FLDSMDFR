@@ -10,11 +10,21 @@ internal enum ReviewRowBand
     Sport
 }
 
+internal sealed class StickyOverlay
+{
+    public string Title { get; init; } = string.Empty;
+
+    public string State { get; init; } = string.Empty;
+
+    public string Summary { get; init; } = string.Empty;
+}
+
 internal sealed class ReviewGrid : DataGridView
 {
     private const string SelectColumnName = "Select";
     private const int CheckboxSize = 18;
     private const int PillHeight = 24;
+    private const int StickyHeight = 52;
 
     private int _selectionAnchor;
     private int _hoverRow = -1;
@@ -26,6 +36,10 @@ internal sealed class ReviewGrid : DataGridView
     public Func<int, bool>? ResolveExpanded { get; set; }
 
     public Func<int, IReadOnlyList<int>>? ResolveSelectableGroup { get; set; }
+
+    public Func<int, string?>? ResolveSnippetHighlight { get; set; }
+
+    public Func<int, StickyOverlay?>? ResolveStickyHeader { get; set; }
 
     public ReviewGrid()
     {
@@ -385,16 +399,32 @@ internal sealed class ReviewGrid : DataGridView
                 Math.Max(0, e.CellBounds.Width - padLeft - 8),
                 e.CellBounds.Height);
 
-            TextRenderer.DrawText(
-                e.Graphics,
-                text,
-                font,
-                textBounds,
-                textColor,
-                TextFormatFlags.VerticalCenter |
-                TextFormatFlags.Left |
-                TextFormatFlags.EndEllipsis |
-                TextFormatFlags.NoPadding);
+            if (column == "Context" &&
+                band == ReviewRowBand.Match &&
+                ResolveSnippetHighlight?.Invoke(e.RowIndex) is string highlight &&
+                !string.IsNullOrWhiteSpace(highlight))
+            {
+                SourcePreviewPanel.PaintHighlightedLine(
+                    e.Graphics,
+                    textBounds,
+                    text,
+                    highlight,
+                    font,
+                    textColor);
+            }
+            else
+            {
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    text,
+                    font,
+                    textBounds,
+                    textColor,
+                    TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.Left |
+                    TextFormatFlags.EndEllipsis |
+                    TextFormatFlags.NoPadding);
+            }
         }
 
         e.Handled = true;
@@ -794,6 +824,90 @@ internal sealed class ReviewGrid : DataGridView
         }
 
         return selected == RowCount;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        PaintStickyHeader(e.Graphics);
+    }
+
+    protected override void OnScroll(ScrollEventArgs e)
+    {
+        base.OnScroll(e);
+        Invalidate();
+    }
+
+    private void PaintStickyHeader(Graphics graphics)
+    {
+        if (RowCount <= 0 || ColumnHeadersHeight <= 0)
+        {
+            return;
+        }
+
+        int first;
+        try
+        {
+            first = FirstDisplayedScrollingRowIndex;
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
+
+        StickyOverlay? overlay = ResolveStickyHeader?.Invoke(first);
+        if (overlay == null)
+        {
+            return;
+        }
+
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var bounds = new Rectangle(0, ColumnHeadersHeight, ClientSize.Width, StickyHeight);
+        using (var fill = new SolidBrush(DarkMode.ElevatedSurface))
+        {
+            graphics.FillRectangle(fill, bounds);
+        }
+
+        using (var bar = new SolidBrush(DarkMode.Secondary))
+        {
+            graphics.FillRectangle(bar, new Rectangle(bounds.Left, bounds.Top, 3, bounds.Height));
+        }
+
+        using (var line = new Pen(DarkMode.Border))
+        {
+            graphics.DrawLine(line, bounds.Left, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
+        }
+
+        int midY = bounds.Y + bounds.Height / 2;
+        PaintChevron(graphics, bounds.X + 12, midY, true, DarkMode.Secondary, 8);
+        PaintFileIcon(graphics, bounds.X + 32, midY, DarkMode.Secondary);
+
+        var titleBounds = new Rectangle(bounds.X + 52, bounds.Y, Math.Max(80, bounds.Width - 280), bounds.Height);
+        TextRenderer.DrawText(
+            graphics,
+            overlay.Title,
+            _headerFont,
+            titleBounds,
+            DarkMode.TextPrimary,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+
+        if (!string.IsNullOrWhiteSpace(overlay.State))
+        {
+            var pillBounds = new Rectangle(bounds.Right - 250, bounds.Y, 110, bounds.Height);
+            PaintStatusPill(graphics, pillBounds, overlay.State);
+        }
+
+        if (!string.IsNullOrWhiteSpace(overlay.Summary))
+        {
+            var summaryBounds = new Rectangle(bounds.Right - 140, bounds.Y, 128, bounds.Height);
+            TextRenderer.DrawText(
+                graphics,
+                overlay.Summary,
+                Font,
+                summaryBounds,
+                DarkMode.TextSecondary,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+        }
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)
