@@ -23,6 +23,8 @@ internal sealed class ReviewGrid : DataGridView
 
     public Func<int, ReviewRowBand>? ResolveRowBand { get; set; }
 
+    public Func<int, IReadOnlyList<int>>? ResolveSelectableGroup { get; set; }
+
     public ReviewGrid()
     {
         DoubleBuffered = true;
@@ -111,7 +113,7 @@ internal sealed class ReviewGrid : DataGridView
         if (IsSelectColumn(e.ColumnIndex))
         {
             Focus();
-            ToggleFocusedRow(e.RowIndex);
+            SelectGroup(e.RowIndex, toggle: true);
             return;
         }
 
@@ -120,6 +122,13 @@ internal sealed class ReviewGrid : DataGridView
 
         if (!control && !shift)
         {
+            if (ResolveRowBand?.Invoke(e.RowIndex) is ReviewRowBand.Sport or ReviewRowBand.File)
+            {
+                SelectGroup(e.RowIndex, toggle: false);
+                Invalidate();
+                return;
+            }
+
             _selectionAnchor = e.RowIndex;
             base.OnCellMouseDown(e);
             Invalidate();
@@ -143,6 +152,12 @@ internal sealed class ReviewGrid : DataGridView
             }
 
             ApplySelection(selected, e.RowIndex, columnIndex);
+            return;
+        }
+
+        if (ResolveRowBand?.Invoke(e.RowIndex) is ReviewRowBand.Sport or ReviewRowBand.File)
+        {
+            SelectGroup(e.RowIndex, toggle: true);
             return;
         }
 
@@ -201,7 +216,7 @@ internal sealed class ReviewGrid : DataGridView
         if (e.Control && e.KeyCode == Keys.Space)
         {
             int row = CurrentCell?.RowIndex ?? _selectionAnchor;
-            ToggleFocusedRow(row);
+            SelectGroup(row, toggle: true);
             e.Handled = true;
             e.SuppressKeyPress = true;
             return;
@@ -417,7 +432,8 @@ internal sealed class ReviewGrid : DataGridView
             "Accurate" => (Blend(DarkMode.Surface, DarkMode.Success, 0.18f), DarkMode.Success),
             "Denied" => (Blend(DarkMode.Surface, DarkMode.Error, 0.2f), DarkMode.Error),
             "Review" => (Blend(DarkMode.Surface, DarkMode.Warning, 0.16f), DarkMode.Warning),
-            "Mixed" => (Blend(DarkMode.Surface, DarkMode.Secondary, 0.16f), DarkMode.Secondary),
+            "Complete" => (Blend(DarkMode.Surface, DarkMode.Success, 0.18f), DarkMode.Success),
+            "Incomplete" => (Blend(DarkMode.Surface, DarkMode.Warning, 0.16f), DarkMode.Warning),
             _ => (DarkMode.ElevatedSurface, DarkMode.TextSecondary)
         };
 
@@ -539,23 +555,47 @@ internal sealed class ReviewGrid : DataGridView
         EnsureRowVisible(next);
     }
 
-    private void ToggleFocusedRow(int rowIndex)
+    public void SelectGroup(int rowIndex, bool toggle)
     {
         if (rowIndex < 0 || rowIndex >= RowCount)
         {
             return;
         }
 
-        var selected = CaptureSelection();
-        if (!selected.Add(rowIndex))
+        IReadOnlyList<int> group = ResolveSelectableGroup?.Invoke(rowIndex) ?? new[] { rowIndex };
+        if (group.Count == 0)
         {
-            selected.Remove(rowIndex);
+            return;
         }
 
-        ApplySelection(
-            selected,
-            rowIndex,
-            SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0));
+        var selected = toggle ? CaptureSelection() : new HashSet<int>();
+        if (toggle)
+        {
+            bool allOn = group.All(selected.Contains);
+            foreach (int index in group)
+            {
+                if (allOn)
+                {
+                    selected.Remove(index);
+                }
+                else
+                {
+                    selected.Add(index);
+                }
+            }
+        }
+        else
+        {
+            foreach (int index in group)
+            {
+                selected.Add(index);
+            }
+        }
+
+        int current = group[0];
+        _selectionAnchor = current;
+        ApplySelection(selected, current, SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0));
+        EnsureRowVisible(current);
     }
 
     private HashSet<int> CaptureSelection()

@@ -287,7 +287,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "WASD / ,aoe move   H/J confirm   T/K deny   Y/N   Click a match for VS Code";
+        _lblHelp.Text = "WASD / ,aoe move   G select group   H/J confirm   T/K deny";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -296,6 +296,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureGrid()
     {
         _grid.ResolveRowBand = GetRowBand;
+        _grid.ResolveSelectableGroup = ExpandAndCollectGroupRows;
         _scrollHost.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
         _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
@@ -902,22 +903,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return string.Empty;
         }
 
-        if (accurate == total)
+        if (accurate + denied == total)
         {
-            return "Accurate";
+            return "Complete";
         }
 
-        if (denied == total)
-        {
-            return "Denied";
-        }
-
-        if (accurate == 0 && denied == 0)
-        {
-            return "Review";
-        }
-
-        return "Mixed";
+        return "Incomplete";
     }
 
     private static string StateLabel(ReviewDecision decision)
@@ -1102,7 +1093,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 "Accurate" => DarkMode.Success,
                 "Denied" => DarkMode.Error,
                 "Review" => DarkMode.Warning,
-                "Mixed" => DarkMode.Secondary,
+                "Complete" => DarkMode.Success,
+                "Incomplete" => DarkMode.Warning,
                 _ => DarkMode.TextSecondary
             };
             e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
@@ -1164,8 +1156,90 @@ public partial class AnalysisReviewControl : ReviewUserControl
             OpenInVsCode(_sports[outline.SportIndex].Files[outline.FileIndex].Name);
             return;
         }
+    }
 
-        ToggleExpanded(outline);
+    private IReadOnlyList<int> ExpandAndCollectGroupRows(int visibleIndex)
+    {
+        if (visibleIndex < 0 || visibleIndex >= _visible.Count)
+        {
+            return Array.Empty<int>();
+        }
+
+        OutlineRow outline = _visible[visibleIndex];
+        if (outline.Kind == OutlineKind.Match)
+        {
+            return new[] { visibleIndex };
+        }
+
+        bool changed = false;
+        if (outline.Kind == OutlineKind.Sport)
+        {
+            SportNode sport = _sports[outline.SportIndex];
+            if (!sport.Expanded)
+            {
+                sport.Expanded = true;
+                changed = true;
+            }
+
+            EnsureFiles(sport);
+            foreach (FileNode file in sport.Files)
+            {
+                if (file.FilteredTotal == 0 || file.Expanded)
+                {
+                    continue;
+                }
+
+                file.Expanded = true;
+                changed = true;
+            }
+        }
+        else
+        {
+            FileNode file = _sports[outline.SportIndex].Files[outline.FileIndex];
+            if (!file.Expanded)
+            {
+                file.Expanded = true;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            ApplyFilterAndRebuild(keepCurrent: true);
+            visibleIndex = FindVisibleIndex(outline);
+            if (visibleIndex < 0)
+            {
+                return Array.Empty<int>();
+            }
+        }
+
+        return CollectGroupRows(visibleIndex);
+    }
+
+    private IReadOnlyList<int> CollectGroupRows(int headerIndex)
+    {
+        var rows = new List<int> { headerIndex };
+        OutlineRow header = _visible[headerIndex];
+
+        for (int i = headerIndex + 1; i < _visible.Count; i++)
+        {
+            OutlineRow row = _visible[i];
+            if (header.Kind == OutlineKind.Sport)
+            {
+                if (row.Kind == OutlineKind.Sport)
+                {
+                    break;
+                }
+            }
+            else if (row.Kind != OutlineKind.Match)
+            {
+                break;
+            }
+
+            rows.Add(i);
+        }
+
+        return rows;
     }
 
     private void Grid_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
@@ -1285,6 +1359,19 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 e.SuppressKeyPress = true;
                 return;
             }
+        }
+
+        if (e.KeyCode is Keys.G or Keys.I && !e.Control && !e.Shift)
+        {
+            int row = _grid.CurrentCell?.RowIndex ?? -1;
+            if (row >= 0)
+            {
+                _grid.SelectGroup(row, toggle: false);
+            }
+
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
         }
 
         if (e.KeyCode is Keys.Y or Keys.J or Keys.H or Keys.N or Keys.K or Keys.T && !e.Control)
