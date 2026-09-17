@@ -17,37 +17,37 @@ public partial class DashboardView : UserControl
         ModernUi.FillCard(
             pnlCardOverview,
             "Overview",
-            "Imported matches and review progress will land here.",
+            "Progress bar and ETA estimates.",
             "—",
             DarkMode.TextPrimary);
 
         ModernUi.FillCard(
             pnlCardActivity,
             "Activity",
-            "Confirm, deny, and undo actions from the Import table.",
+            "TBD",
             "Ready",
             DarkMode.Secondary);
 
         ModernUi.FillCard(
             pnlCardStatus,
             "Status",
-            "Accurate stays green. Denied stays red. Remaining stays in review.",
+            "Time Left",
             "Review",
             DarkMode.Warning);
 
         ModernUi.FillCard(
             pnlCard4,
             "Coverage",
-            "Sports and files stay nested in the review table until you expand them.");
+            "TBD");
 
         ModernUi.FillCard(
             pnlCard5,
             "Shortcuts",
-            "Y confirm  ·  N deny  ·  Space cycle  ·  Ctrl+Z undo  ·  F3 next");
+            "Customization Options");
 
         ModernUi.FillCard(
             pnlCard6,
             "Workspace",
-            "Utilities and exports will use the same card layout as Import.");
+            "TBD");
     }
 }

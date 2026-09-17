@@ -17,7 +17,7 @@ public partial class UtilitiesView : UserControl
         ModernUi.FillCard(
             pnlCardOverview,
             "Utilities",
-            "Maintenance tools will use the same surface, type, and spacing as Import.");
+            "Maintenance tools and stuff.");
 
         ModernUi.FillCard(
             pnlUtilities,

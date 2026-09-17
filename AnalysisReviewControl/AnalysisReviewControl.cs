@@ -41,6 +41,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly ThemedDropDown _cboStatus = new();
     private readonly Button _btnImport = new();
     private readonly Button _btnExport = new();
+    private readonly Button _btnResetFilters = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
     private readonly Button _btnUndo = new();
@@ -49,6 +50,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly Label _lblStats = new();
     private readonly Label _lblHelp = new();
     private readonly ReviewGrid _grid = new();
+    private readonly ThemedScrollHost _scrollHost;
     private readonly System.Windows.Forms.Timer _searchDebounce = new();
     private readonly Stack<List<(int RowIndex, ReviewDecision Previous)>> _undoStack = new();
     private List<(int RowIndex, ReviewDecision Previous)>? _pendingUndo;
@@ -66,6 +68,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     public AnalysisReviewControl()
     {
+        _scrollHost = new ThemedScrollHost(_grid);
         InitializeComponent();
         ConfigureControl();
     }
@@ -124,6 +127,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         StyleActionButton(_btnImport, "Import JSON", DarkMode.Primary, DarkMode.Background, 128);
         StyleActionButton(_btnExport, "Export JSON", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 120);
+        StyleActionButton(_btnResetFilters, "Reset", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 80);
         StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 118);
         StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 104);
         StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 92);
@@ -136,7 +140,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         flow.Controls.Add(Wrap(CreateCaption("Search"), new ModernFieldHost(_txtSearch, 268, searchIcon: true)));
         flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
         flow.Controls.Add(Wrap(CreateCaption("File"), _cboFile));
-        flow.Controls.Add(Wrap(CreateCaption("View"), _cboStatus));
+        flow.Controls.Add(Wrap(CreateCaption("View"), CreateViewRow()));
         flow.Controls.Add(Wrap(CreateCaption("Review"), CreateButtonRow()));
 
         _pnlToolbar.Controls.Add(flow);
@@ -190,6 +194,25 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _btnExport.Margin = new Padding(8, 0, 0, 0);
         panel.Controls.Add(_btnImport);
         panel.Controls.Add(_btnExport);
+        return panel;
+    }
+
+    private Control CreateViewRow()
+    {
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Width = 236,
+            Height = 36,
+            BackColor = DarkMode.Surface,
+            Margin = Padding.Empty
+        };
+
+        _cboStatus.Margin = Padding.Empty;
+        _btnResetFilters.Margin = new Padding(8, 0, 0, 0);
+        panel.Controls.Add(_cboStatus);
+        panel.Controls.Add(_btnResetFilters);
         return panel;
     }
 
@@ -273,7 +296,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureGrid()
     {
         _grid.ResolveRowBand = GetRowBand;
-        _grid.Dock = DockStyle.Fill;
+        _scrollHost.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
         _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
         _grid.RowTemplate.Height = 50;
@@ -308,10 +331,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _card.BackdropColor = DarkMode.Background;
         _card.FillColor = DarkMode.Surface;
 
-        _card.Controls.Add(_grid);
+        _card.Controls.Add(_scrollHost);
         _card.Controls.Add(_pnlToolbar);
         _card.Controls.Add(_pnlStatus);
-        _grid.BringToFront();
+        _scrollHost.BringToFront();
 
         Controls.Add(_card);
     }
@@ -373,6 +396,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         _btnImport.Click += (_, _) => ImportClicked?.Invoke(this, EventArgs.Empty);
         _btnExport.Click += (_, _) => ExportClicked?.Invoke(this, EventArgs.Empty);
+        _btnResetFilters.Click += (_, _) => ResetFilters();
         _btnConfirm.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
         _btnDeny.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Denied, advance: true);
         _btnUndo.Click += (_, _) => UndoLast();
@@ -844,6 +868,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.RowCount = _visible.Count;
         _updatingUi = false;
         _grid.Invalidate();
+        _scrollHost.SyncFromGrid();
     }
 
     private void Grid_CellValueNeeded(object? sender, DataGridViewCellValueEventArgs e)
@@ -1480,8 +1505,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        int next = keep + 1;
-        if (next < _visible.Count)
+        int next = FindNextHit(keep);
+        if (next >= 0)
         {
             SelectVisibleRow(next);
         }
@@ -1489,6 +1514,20 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             SelectVisibleRow(keep);
         }
+    }
+
+    private int FindNextHit(int fromVisibleIndex)
+    {
+        int start = Math.Max(fromVisibleIndex + 1, 0);
+        for (int i = start; i < _visible.Count; i++)
+        {
+            if (_visible[i].Kind == OutlineKind.Match)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private void ReviewOutline(
@@ -1938,6 +1977,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         catch (InvalidOperationException)
         {
         }
+
+        _scrollHost.SyncFromGrid();
     }
 
     private void UpdateStats()
@@ -2046,6 +2087,29 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.SelectedIndex = 0;
         _cboFile.EndUpdate();
         _updatingUi = false;
+    }
+
+    private void ResetFilters()
+    {
+        _searchDebounce.Stop();
+        _updatingUi = true;
+        _txtSearch.Clear();
+        _searchText = string.Empty;
+        if (_cboSport.Items.Count > 0)
+        {
+            _cboSport.SelectedIndex = 0;
+        }
+
+        RebuildFileFilter();
+        _updatingUi = true;
+        if (_cboStatus.Items.Count > 0)
+        {
+            _cboStatus.SelectedIndex = 0;
+        }
+
+        _updatingUi = false;
+        ApplyFilterAndRebuild(keepCurrent: true);
+        _grid.Focus();
     }
 
     private string? GetSelectedSport()

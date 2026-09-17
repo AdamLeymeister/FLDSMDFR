@@ -594,6 +594,105 @@ internal sealed class ReviewGrid : DataGridView
         return selected == RowCount;
     }
 
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        if (RowCount <= 0)
+        {
+            base.OnMouseWheel(e);
+            return;
+        }
+
+        int lines = SystemInformation.MouseWheelScrollLines;
+        if (lines == 0)
+        {
+            lines = 3;
+        }
+        else if (lines < 0)
+        {
+            lines = Math.Max(1, GetVisibleRowCount());
+        }
+
+        int next = Math.Clamp(
+            GetFirstVisibleRow() - Math.Sign(e.Delta) * lines,
+            0,
+            GetScrollMaximum());
+
+        SetFirstVisibleRow(next);
+
+        if (e is HandledMouseEventArgs handled)
+        {
+            handled.Handled = true;
+        }
+
+        base.OnMouseWheel(e);
+    }
+
+    public int GetVisibleRowCount()
+    {
+        if (!IsHandleCreated || RowCount <= 0)
+        {
+            return 1;
+        }
+
+        try
+        {
+            return Math.Max(1, DisplayedRowCount(true));
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return 1;
+        }
+        catch (InvalidOperationException)
+        {
+            return 1;
+        }
+    }
+
+    public int GetFirstVisibleRow()
+    {
+        if (!IsHandleCreated || RowCount <= 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            return Math.Max(0, FirstDisplayedScrollingRowIndex);
+        }
+        catch (InvalidOperationException)
+        {
+            return 0;
+        }
+    }
+
+    public int GetScrollMaximum()
+    {
+        return Math.Max(0, RowCount - GetVisibleRowCount());
+    }
+
+    public void SetFirstVisibleRow(int rowIndex)
+    {
+        if (!IsHandleCreated || RowCount <= 0)
+        {
+            return;
+        }
+
+        int next = Math.Clamp(rowIndex, 0, GetScrollMaximum());
+        try
+        {
+            if (FirstDisplayedScrollingRowIndex != next)
+            {
+                FirstDisplayedScrollingRowIndex = next;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+        }
+    }
+
     private void EnsureRowVisible(int rowIndex)
     {
         try
