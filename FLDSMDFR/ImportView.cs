@@ -13,14 +13,12 @@ public partial class ImportView : UserControl
         InitializeComponent();
 
         ConfigureView();
-        ConfigureImportRail();
-
-        btnImportJson.Click += btnImportJson_Click;
 
         _reviewControl = new AnalysisReviewControl.AnalysisReviewControl
         {
             Dock = DockStyle.Fill
         };
+        _reviewControl.ImportClicked += (_, _) => ImportJson();
 
         pnlReview.Controls.Add(_reviewControl);
     }
@@ -29,67 +27,18 @@ public partial class ImportView : UserControl
     {
         ModernUi.StylePage(this, pnlContent, tlpImport);
 
-        tlpImport.ColumnStyles[0].SizeType = SizeType.Absolute;
-        tlpImport.ColumnStyles[0].Width = 188;
-        tlpImport.ColumnStyles[1].SizeType = SizeType.Percent;
-        tlpImport.ColumnStyles[1].Width = 100;
+        tlpImport.ColumnStyles.Clear();
+        tlpImport.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        tlpImport.ColumnCount = 1;
 
         pnlCardActivity.BackColor = DarkMode.Background;
-        pnlCardActivity.Margin = new Padding(4, 8, 8, 8);
+        pnlCardActivity.Margin = new Padding(8);
         pnlCardActivity.Padding = Padding.Empty;
         pnlReview.BackColor = DarkMode.Background;
         pnlReview.Padding = Padding.Empty;
     }
 
-    private void ConfigureImportRail()
-    {
-        pnlCardOverview.BackColor = DarkMode.Background;
-        pnlCardOverview.Margin = new Padding(8, 8, 4, 8);
-        pnlCardOverview.Padding = Padding.Empty;
-
-        var card = new RoundedCardPanel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(18),
-            BackdropColor = DarkMode.Background,
-            FillColor = DarkMode.Surface
-        };
-
-        btnImportJson.Parent = null;
-        btnImportJson.Dock = DockStyle.Top;
-        btnImportJson.Height = 36;
-        btnImportJson.Text = "Import JSON";
-        ModernUi.StylePrimaryButton(btnImportJson);
-
-        var hint = new Label
-        {
-            Text = "Load a JSON match export. Review stays on this tab when you leave and come back.",
-            Dock = DockStyle.Fill,
-            AutoSize = false,
-            Font = ModernUi.BodyFont,
-            ForeColor = DarkMode.TextDisabled,
-            BackColor = Color.Transparent,
-            Padding = new Padding(0, 12, 0, 0)
-        };
-
-        var caption = new Label
-        {
-            Text = "SOURCE",
-            Dock = DockStyle.Top,
-            Height = 18,
-            Font = ModernUi.CaptionFont,
-            ForeColor = DarkMode.TextDisabled,
-            BackColor = Color.Transparent
-        };
-
-        card.Controls.Add(hint);
-        card.Controls.Add(btnImportJson);
-        card.Controls.Add(caption);
-
-        pnlCardOverview.Controls.Add(card);
-    }
-
-    private void btnImportJson_Click(object sender, EventArgs e)
+    private void ImportJson()
     {
         using OpenFileDialog openFileDialog = new()
         {

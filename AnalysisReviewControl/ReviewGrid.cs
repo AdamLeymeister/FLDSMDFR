@@ -3,6 +3,13 @@ using Themes;
 
 namespace AnalysisReviewControl;
 
+internal enum ReviewRowBand
+{
+    Match,
+    File,
+    Sport
+}
+
 internal sealed class ReviewGrid : DataGridView
 {
     private const string SelectColumnName = "Select";
@@ -13,6 +20,8 @@ internal sealed class ReviewGrid : DataGridView
     private int _hoverRow = -1;
     private readonly Font _headerFont = new("Segoe UI", 9f, FontStyle.Bold);
     private readonly Font _pillFont = new("Segoe UI", 8.5f, FontStyle.Bold);
+
+    public Func<int, ReviewRowBand>? ResolveRowBand { get; set; }
 
     public ReviewGrid()
     {
@@ -296,18 +305,40 @@ internal sealed class ReviewGrid : DataGridView
 
         bool selected = (e.State & DataGridViewElementStates.Selected) != 0;
         bool hovered = e.RowIndex == _hoverRow;
-        Color rowBack = selected
-            ? Blend(DarkMode.Surface, DarkMode.Primary, hovered ? 0.22f : 0.14f)
-            : hovered
-                ? Blend(DarkMode.Surface, DarkMode.Primary, 0.09f)
-                : DarkMode.Surface;
+        ReviewRowBand band = ResolveRowBand?.Invoke(e.RowIndex) ?? ReviewRowBand.Match;
+        Color baseBack = band switch
+        {
+            ReviewRowBand.Sport => DarkMode.HoverSurface,
+            ReviewRowBand.File => DarkMode.ElevatedSurface,
+            _ => DarkMode.Surface
+        };
+        Color rowBack;
+        if (band == ReviewRowBand.Match)
+        {
+            rowBack = selected
+                ? Blend(baseBack, DarkMode.Primary, hovered ? 0.22f : 0.14f)
+                : hovered
+                    ? Blend(baseBack, DarkMode.Primary, 0.09f)
+                    : baseBack;
+        }
+        else
+        {
+            rowBack = selected
+                ? Blend(baseBack, DarkMode.TextPrimary, hovered ? 0.10f : 0.06f)
+                : hovered
+                    ? Blend(baseBack, DarkMode.TextPrimary, 0.04f)
+                    : baseBack;
+        }
 
         using (var back = new SolidBrush(rowBack))
         {
             e.Graphics.FillRectangle(back, e.CellBounds);
         }
 
-        using (var line = new Pen(Blend(DarkMode.Border, DarkMode.Surface, 0.55f)))
+        Color divider = band == ReviewRowBand.Match
+            ? Blend(DarkMode.Border, DarkMode.Surface, 0.55f)
+            : DarkMode.Border;
+        using (var line = new Pen(divider))
         {
             e.Graphics.DrawLine(
                 line,
@@ -315,6 +346,14 @@ internal sealed class ReviewGrid : DataGridView
                 e.CellBounds.Bottom - 1,
                 e.CellBounds.Right,
                 e.CellBounds.Bottom - 1);
+        }
+
+        if (e.ColumnIndex == 0 && band != ReviewRowBand.Match)
+        {
+            using var bar = new SolidBrush(DarkMode.Border);
+            e.Graphics.FillRectangle(
+                bar,
+                new Rectangle(e.CellBounds.Left, e.CellBounds.Top, 3, e.CellBounds.Height));
         }
 
         string column = Columns[e.ColumnIndex].Name;

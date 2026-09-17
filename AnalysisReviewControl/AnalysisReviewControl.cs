@@ -39,6 +39,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly ThemedDropDown _cboSport = new();
     private readonly ThemedDropDown _cboFile = new();
     private readonly ThemedDropDown _cboStatus = new();
+    private readonly Button _btnImport = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
     private readonly Button _btnUndo = new();
@@ -55,6 +56,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private Font? _fileFont;
     private bool _updatingUi;
     private string _searchText = string.Empty;
+
+    public event EventHandler? ImportClicked;
 
     public AnalysisReviewControl()
     {
@@ -114,6 +117,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.Items.Add(AllFiles);
         _cboFile.SelectedIndex = 0;
 
+        StyleActionButton(_btnImport, "Import JSON", DarkMode.Primary, DarkMode.Background, 128);
         StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 118);
         StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 104);
         StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 92);
@@ -121,6 +125,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 118);
         UpdateUndoButton();
 
+        flow.Controls.Add(Wrap(CreateCaption("Source"), _btnImport));
         flow.Controls.Add(Wrap(CreateCaption("Search"), new ModernFieldHost(_txtSearch, 268, searchIcon: true)));
         flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
         flow.Controls.Add(Wrap(CreateCaption("File"), _cboFile));
@@ -136,6 +141,30 @@ public partial class AnalysisReviewControl : ReviewUserControl
             (DarkMode.Surface.R * 4 + DarkMode.Error.R) / 5,
             (DarkMode.Surface.G * 4 + DarkMode.Error.G) / 5,
             (DarkMode.Surface.B * 4 + DarkMode.Error.B) / 5);
+    }
+
+    private static Color Blend(Color from, Color to, float amount)
+    {
+        amount = Math.Clamp(amount, 0f, 1f);
+        return Color.FromArgb(
+            (int)(from.R + (to.R - from.R) * amount),
+            (int)(from.G + (to.G - from.G) * amount),
+            (int)(from.B + (to.B - from.B) * amount));
+    }
+
+    private ReviewRowBand GetRowBand(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _visible.Count)
+        {
+            return ReviewRowBand.Match;
+        }
+
+        return _visible[rowIndex].Kind switch
+        {
+            OutlineKind.Sport => ReviewRowBand.Sport,
+            OutlineKind.File => ReviewRowBand.File,
+            _ => ReviewRowBand.Match
+        };
     }
 
     private Control CreateButtonRow()
@@ -217,6 +246,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
     private void ConfigureGrid()
     {
+        _grid.ResolveRowBand = GetRowBand;
         _grid.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
         _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
@@ -315,6 +345,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             ApplyFilterAndRebuild(keepCurrent: true);
         };
 
+        _btnImport.Click += (_, _) => ImportClicked?.Invoke(this, EventArgs.Empty);
         _btnConfirm.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
         _btnDeny.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Denied, advance: true);
         _btnUndo.Click += (_, _) => UndoLast();
@@ -981,9 +1012,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         Color back = outline.Kind switch
         {
-            OutlineKind.Sport => DarkMode.Surface,
+            OutlineKind.Sport => DarkMode.HoverSurface,
             OutlineKind.File => DarkMode.ElevatedSurface,
-            _ => DarkMode.Background
+            _ => DarkMode.Surface
         };
 
         e.CellStyle.BackColor = back;
@@ -1005,9 +1036,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 OutlineKind.File => _fileFont,
                 _ => Font
             };
-            e.CellStyle.ForeColor = outline.Kind == OutlineKind.Sport
-                ? DarkMode.Primary
-                : DarkMode.TextPrimary;
+            e.CellStyle.ForeColor = DarkMode.TextPrimary;
             e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
         }
         else if (column == ColState)
