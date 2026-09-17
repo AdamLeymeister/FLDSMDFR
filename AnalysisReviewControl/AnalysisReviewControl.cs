@@ -287,7 +287,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _lblHelp.TextAlign = ContentAlignment.MiddleRight;
         _lblHelp.ForeColor = DarkMode.TextDisabled;
         _lblHelp.BackColor = DarkMode.Surface;
-        _lblHelp.Text = "Click a match to open in VS Code   Ctrl+Z undo   Y confirm   N deny   Space cycle";
+        _lblHelp.Text = "WASD / ,aoe move   H/J confirm   T/K deny   Y/N   Click a match for VS Code";
 
         _pnlStatus.Controls.Add(_lblHelp);
         _pnlStatus.Controls.Add(_lblStats);
@@ -1287,10 +1287,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
             }
         }
 
-        if (e.KeyCode is Keys.Y or Keys.N && !e.Control)
+        if (e.KeyCode is Keys.Y or Keys.J or Keys.H or Keys.N or Keys.K or Keys.T && !e.Control)
         {
             ReviewSelected(
-                decision: e.KeyCode == Keys.Y
+                decision: e.KeyCode is Keys.Y or Keys.J or Keys.H
                     ? ReviewDecision.Accurate
                     : ReviewDecision.Denied,
                 advance: true);
@@ -1315,7 +1315,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (e.KeyCode == Keys.Left && !e.Control && !e.Shift)
+        if (e.KeyCode is Keys.Left or Keys.A && !e.Control && !e.Shift)
         {
             CollapseCurrent();
             e.Handled = true;
@@ -1323,7 +1323,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
             return;
         }
 
-        if (e.KeyCode == Keys.Right && !e.Control && !e.Shift)
+        if (e.KeyCode is Keys.Right or Keys.D or Keys.E && !e.Control && !e.Shift)
         {
             ExpandCurrent();
             e.Handled = true;

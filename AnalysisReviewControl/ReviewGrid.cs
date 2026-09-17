@@ -190,6 +190,14 @@ internal sealed class ReviewGrid : DataGridView
             return;
         }
 
+        if (TryGetVerticalDelta(e.KeyCode) is int delta && !e.Alt)
+        {
+            MoveSelection(delta, e.Control, e.Shift);
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+
         if (e.Control && e.KeyCode == Keys.Space)
         {
             int row = CurrentCell?.RowIndex ?? _selectionAnchor;
@@ -211,39 +219,6 @@ internal sealed class ReviewGrid : DataGridView
             }
 
             ApplySelection(selected, row, SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0));
-            e.Handled = true;
-            e.SuppressKeyPress = true;
-            return;
-        }
-
-        if (e.Control && e.KeyCode is Keys.Up or Keys.Down)
-        {
-            int current = CurrentCell?.RowIndex ?? 0;
-            int next = e.KeyCode == Keys.Down ? current + 1 : current - 1;
-            next = Math.Clamp(next, 0, RowCount - 1);
-            ApplySelection(CaptureSelection(), next, SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0));
-            EnsureRowVisible(next);
-            e.Handled = true;
-            e.SuppressKeyPress = true;
-            return;
-        }
-
-        if (e.Shift && e.KeyCode is Keys.Up or Keys.Down)
-        {
-            int current = CurrentCell?.RowIndex ?? _selectionAnchor;
-            int next = e.KeyCode == Keys.Down ? current + 1 : current - 1;
-            next = Math.Clamp(next, 0, RowCount - 1);
-
-            var selected = new HashSet<int>();
-            int start = Math.Min(_selectionAnchor, next);
-            int end = Math.Max(_selectionAnchor, next);
-            for (int i = start; i <= end; i++)
-            {
-                selected.Add(i);
-            }
-
-            ApplySelection(selected, next, SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0));
-            EnsureRowVisible(next);
             e.Handled = true;
             e.SuppressKeyPress = true;
             return;
@@ -519,6 +494,49 @@ internal sealed class ReviewGrid : DataGridView
             graphics.FillPath(fill, path);
             graphics.DrawPath(border, path);
         }
+    }
+
+    private static int? TryGetVerticalDelta(Keys key)
+    {
+        return key switch
+        {
+            Keys.Up or Keys.W or Keys.Oemcomma => -1,
+            Keys.Down or Keys.S or Keys.O => 1,
+            _ => null
+        };
+    }
+
+    private void MoveSelection(int delta, bool control, bool shift)
+    {
+        int current = shift
+            ? CurrentCell?.RowIndex ?? _selectionAnchor
+            : CurrentCell?.RowIndex ?? 0;
+        int next = Math.Clamp(current + delta, 0, RowCount - 1);
+        int column = SanitizeColumnIndex(CurrentCell?.ColumnIndex ?? 0);
+
+        if (control && !shift)
+        {
+            ApplySelection(CaptureSelection(), next, column);
+        }
+        else if (shift)
+        {
+            var selected = new HashSet<int>();
+            int start = Math.Min(_selectionAnchor, next);
+            int end = Math.Max(_selectionAnchor, next);
+            for (int i = start; i <= end; i++)
+            {
+                selected.Add(i);
+            }
+
+            ApplySelection(selected, next, column);
+        }
+        else
+        {
+            _selectionAnchor = next;
+            ApplySelection(new HashSet<int> { next }, next, column);
+        }
+
+        EnsureRowVisible(next);
     }
 
     private void ToggleFocusedRow(int rowIndex)
