@@ -23,6 +23,8 @@ internal sealed class ReviewGrid : DataGridView
 
     public Func<int, ReviewRowBand>? ResolveRowBand { get; set; }
 
+    public Func<int, bool>? ResolveExpanded { get; set; }
+
     public Func<int, IReadOnlyList<int>>? ResolveSelectableGroup { get; set; }
 
     public ReviewGrid()
@@ -302,20 +304,20 @@ internal sealed class ReviewGrid : DataGridView
             _ => DarkMode.Surface
         };
         Color rowBack;
-        if (band == ReviewRowBand.Match)
+        if (band == ReviewRowBand.File)
         {
             rowBack = selected
-                ? Blend(baseBack, DarkMode.Primary, hovered ? 0.22f : 0.14f)
+                ? Blend(baseBack, DarkMode.Secondary, hovered ? 0.14f : 0.08f)
                 : hovered
-                    ? Blend(baseBack, DarkMode.Primary, 0.09f)
+                    ? Blend(baseBack, DarkMode.Secondary, 0.06f)
                     : baseBack;
         }
         else
         {
             rowBack = selected
-                ? Blend(baseBack, DarkMode.TextPrimary, hovered ? 0.10f : 0.06f)
+                ? Blend(baseBack, DarkMode.Primary, hovered ? 0.22f : 0.14f)
                 : hovered
-                    ? Blend(baseBack, DarkMode.TextPrimary, 0.04f)
+                    ? Blend(baseBack, DarkMode.Primary, 0.09f)
                     : baseBack;
         }
 
@@ -337,9 +339,16 @@ internal sealed class ReviewGrid : DataGridView
                 e.CellBounds.Bottom - 1);
         }
 
-        if (e.ColumnIndex == 0 && band != ReviewRowBand.Match)
+        if (e.ColumnIndex == 0 && band == ReviewRowBand.File)
         {
-            using var bar = new SolidBrush(DarkMode.Border);
+            using var bar = new SolidBrush(DarkMode.Secondary);
+            e.Graphics.FillRectangle(
+                bar,
+                new Rectangle(e.CellBounds.Left, e.CellBounds.Top, 3, e.CellBounds.Height));
+        }
+        else if (e.ColumnIndex == 0 && band == ReviewRowBand.Sport)
+        {
+            using var bar = new SolidBrush(DarkMode.PrimaryMuted);
             e.Graphics.FillRectangle(
                 bar,
                 new Rectangle(e.CellBounds.Left, e.CellBounds.Top, 3, e.CellBounds.Height));
@@ -358,6 +367,15 @@ internal sealed class ReviewGrid : DataGridView
         }
         else
         {
+            if (column == "Item")
+            {
+                PaintItemChrome(
+                    e.Graphics,
+                    e.CellBounds,
+                    band,
+                    ResolveExpanded?.Invoke(e.RowIndex) ?? false);
+            }
+
             Color textColor = e.CellStyle?.ForeColor ?? DarkMode.TextPrimary;
             Font font = e.CellStyle?.Font ?? Font;
             int padLeft = e.CellStyle?.Padding.Left ?? 8;
@@ -417,6 +435,133 @@ internal sealed class ReviewGrid : DataGridView
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.Left |
             TextFormatFlags.EndEllipsis);
+    }
+
+    protected override void OnRowHeightInfoNeeded(DataGridViewRowHeightInfoNeededEventArgs e)
+    {
+        ReviewRowBand band = ResolveRowBand?.Invoke(e.RowIndex) ?? ReviewRowBand.Match;
+        e.Height = band switch
+        {
+            ReviewRowBand.Sport => 52,
+            ReviewRowBand.File => 58,
+            _ => 56
+        };
+    }
+
+    private static void PaintItemChrome(
+        Graphics graphics,
+        Rectangle cellBounds,
+        ReviewRowBand band,
+        bool expanded)
+    {
+        int midY = cellBounds.Y + cellBounds.Height / 2;
+
+        if (band == ReviewRowBand.Match)
+        {
+            PaintLedDot(graphics, cellBounds.X + 28, midY, DarkMode.Primary);
+            return;
+        }
+
+        if (band == ReviewRowBand.File)
+        {
+            PaintChevron(graphics, cellBounds.X + 8, midY, expanded, DarkMode.Secondary, 8);
+            PaintFileIcon(graphics, cellBounds.X + 28, midY, DarkMode.Secondary);
+            return;
+        }
+
+        PaintChevron(graphics, cellBounds.X + 8, midY, expanded, DarkMode.PrimaryMuted, 7);
+        PaintSearchIcon(graphics, cellBounds.X + 26, midY, DarkMode.Primary);
+    }
+
+    private static void PaintSearchIcon(Graphics graphics, int x, int midY, Color color)
+    {
+        using var pen = new Pen(color, 1.7f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
+
+        int y = midY - 6;
+        graphics.DrawEllipse(pen, x, y, 11, 11);
+        graphics.DrawLine(pen, x + 9, y + 9, x + 15, y + 15);
+    }
+
+    private static void PaintLedDot(Graphics graphics, int x, int midY, Color color)
+    {
+        const int core = 9;
+        int cy = midY - core / 2;
+        using (var glow = new SolidBrush(Color.FromArgb(42, color)))
+        {
+            graphics.FillEllipse(glow, x - 5, cy - 5, core + 10, core + 10);
+        }
+
+        using (var halo = new SolidBrush(Color.FromArgb(96, color)))
+        {
+            graphics.FillEllipse(halo, x - 2, cy - 2, core + 4, core + 4);
+        }
+
+        using (var fill = new SolidBrush(color))
+        {
+            graphics.FillEllipse(fill, x, cy, core, core);
+        }
+
+        using (var shine = new SolidBrush(Color.FromArgb(170, 255, 255, 255)))
+        {
+            graphics.FillEllipse(shine, x + 2, cy + 2, 3, 3);
+        }
+    }
+
+    private static void PaintChevron(
+        Graphics graphics,
+        int x,
+        int midY,
+        bool expanded,
+        Color color,
+        int size)
+    {
+        using var brush = new SolidBrush(color);
+        PointF[] points = expanded
+            ? new[]
+            {
+                new PointF(x, midY - size / 3f),
+                new PointF(x + size, midY - size / 3f),
+                new PointF(x + size / 2f, midY + size / 2.5f)
+            }
+            : new[]
+            {
+                new PointF(x, midY - size / 2f),
+                new PointF(x + size - 1, midY),
+                new PointF(x, midY + size / 2f)
+            };
+        graphics.FillPolygon(brush, points);
+    }
+
+    private static void PaintFileIcon(Graphics graphics, int x, int midY, Color color)
+    {
+        const int width = 11;
+        const int height = 13;
+        const int fold = 4;
+        int y = midY - height / 2;
+        Point[] outline =
+        {
+            new(x, y),
+            new(x + width - fold, y),
+            new(x + width, y + fold),
+            new(x + width, y + height),
+            new(x, y + height)
+        };
+
+        using var fill = new SolidBrush(Color.FromArgb(36, color));
+        using var pen = new Pen(color, 1.3f)
+        {
+            LineJoin = LineJoin.Round,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
+        graphics.FillPolygon(fill, outline);
+        graphics.DrawPolygon(pen, outline);
+        graphics.DrawLine(pen, x + width - fold, y, x + width - fold, y + fold);
+        graphics.DrawLine(pen, x + width - fold, y + fold, x + width, y + fold);
     }
 
     private void PaintStatusPill(Graphics graphics, Rectangle cellBounds, string status)

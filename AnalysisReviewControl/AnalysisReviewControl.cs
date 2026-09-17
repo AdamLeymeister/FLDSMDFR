@@ -82,8 +82,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
         BackColor = DarkMode.Background;
         Padding = new Padding(4);
         Font = CreateOwnedFont("Segoe UI", 10.5f);
-        _sportFont = CreateOwnedFont("Segoe UI", 11.5f, FontStyle.Bold);
-        _fileFont = CreateOwnedFont("Segoe UI", 10.5f);
+        _sportFont = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
+        _fileFont = CreateOwnedFont("Segoe UI", 11f, FontStyle.Bold);
 
         ConfigureToolbar();
         ConfigureStatusBar();
@@ -178,6 +178,22 @@ public partial class AnalysisReviewControl : ReviewUserControl
             OutlineKind.Sport => ReviewRowBand.Sport,
             OutlineKind.File => ReviewRowBand.File,
             _ => ReviewRowBand.Match
+        };
+    }
+
+    private bool GetRowExpanded(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _visible.Count)
+        {
+            return false;
+        }
+
+        OutlineRow outline = _visible[rowIndex];
+        return outline.Kind switch
+        {
+            OutlineKind.Sport => _sports[outline.SportIndex].Expanded,
+            OutlineKind.File => _sports[outline.SportIndex].Files[outline.FileIndex].Expanded,
+            _ => true
         };
     }
 
@@ -299,11 +315,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private void ConfigureGrid()
     {
         _grid.ResolveRowBand = GetRowBand;
+        _grid.ResolveExpanded = GetRowExpanded;
         _grid.ResolveSelectableGroup = ExpandAndCollectGroupRows;
         _scrollHost.Dock = DockStyle.Fill;
         _grid.Font = CreateOwnedFont("Segoe UI", 10.5f);
         _grid.ColumnHeadersDefaultCellStyle.Font = CreateOwnedFont("Segoe UI", 9f, FontStyle.Bold);
-        _grid.RowTemplate.Height = 50;
+        _grid.RowTemplate.Height = 56;
 
         _grid.Columns.Add(CreateTextColumn(ColSelect, "", 48, 48));
         _grid.Columns.Add(CreateTextColumn(ColState, "Status", 120, 108));
@@ -322,9 +339,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _grid.Columns[ColLine].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
         _grid.Columns[ColLine].Width = 72;
         _grid.Columns[ColLine].FillWeight = 1;
-        _grid.Columns[ColItem].FillWeight = 40;
-        _grid.Columns[ColFile].FillWeight = 22;
-        _grid.Columns[ColSummary].FillWeight = 30;
+        _grid.Columns[ColItem].FillWeight = 52;
+        _grid.Columns[ColFile].Visible = false;
+        _grid.Columns[ColSummary].FillWeight = 38;
     }
 
     private void ConfigureCard()
@@ -929,8 +946,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
     {
         return outline.Kind switch
         {
-            OutlineKind.Sport => $"{Glyph(_sports[outline.SportIndex].Expanded)}  {_sports[outline.SportIndex].Name}",
-            OutlineKind.File => $"{Glyph(_sports[outline.SportIndex].Files[outline.FileIndex].Expanded)}  {DisplayFileName(_sports[outline.SportIndex].Files[outline.FileIndex].Name)}",
+            OutlineKind.Sport => _sports[outline.SportIndex].Name.ToUpperInvariant(),
+            OutlineKind.File => DisplayFileName(_sports[outline.SportIndex].Files[outline.FileIndex].Name),
             _ => DisplayWord(_rows[outline.RowIndex])
         };
     }
@@ -955,11 +972,6 @@ public partial class AnalysisReviewControl : ReviewUserControl
         {
             return path;
         }
-    }
-
-    private static string Glyph(bool expanded)
-    {
-        return expanded ? "▼" : "▶";
     }
 
     private string GetFileText(OutlineRow outline)
@@ -1070,8 +1082,8 @@ public partial class AnalysisReviewControl : ReviewUserControl
 
         int indent = outline.Kind switch
         {
-            OutlineKind.Sport => 10,
-            OutlineKind.File => 28,
+            OutlineKind.Sport => 48,
+            OutlineKind.File => 48,
             _ => 48
         };
 
@@ -1084,9 +1096,12 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 OutlineKind.File => _fileFont,
                 _ => Font
             };
-            e.CellStyle.ForeColor = outline.Kind is OutlineKind.Sport or OutlineKind.File
-                ? DarkMode.Primary
-                : DarkMode.TextPrimary;
+            e.CellStyle.ForeColor = outline.Kind switch
+            {
+                OutlineKind.Sport => DarkMode.Primary,
+                OutlineKind.File => DarkMode.TextPrimary,
+                _ => DarkMode.TextPrimary
+            };
             e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
         }
         else if (column == ColState)

@@ -34,4 +34,7 @@ public class Term
     public int Line { get; set; }
 
     public bool IsAccurate { get; set; } = false;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsReviewed { get; set; }
 }

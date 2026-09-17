@@ -50,9 +50,7 @@ public class JsonAnalyzer
                     LineNumber = term.Line,
                     ImportOrder = order++,
                     OriginalIsAccurate = term.IsAccurate,
-                    Decision = term.IsAccurate
-                        ? ReviewDecision.Accurate
-                        : ReviewDecision.Pending
+                    Decision = ReadDecision(term)
                 });
             }
         }
@@ -136,9 +134,7 @@ public class JsonAnalyzer
                     LineNumber = term.Line,
                     ImportOrder = order++,
                     OriginalIsAccurate = term.IsAccurate,
-                    Decision = term.IsAccurate
-                        ? ReviewDecision.Accurate
-                        : ReviewDecision.Pending
+                    Decision = ReadDecision(term)
                 });
             }
         }
@@ -164,8 +160,19 @@ public class JsonAnalyzer
                 ReviewDecision.Accurate => true,
                 ReviewDecision.Denied => false,
                 _ => row.OriginalIsAccurate
-            }
+            },
+            IsReviewed = row.Decision is ReviewDecision.Accurate or ReviewDecision.Denied
         };
+    }
+
+    private static ReviewDecision ReadDecision(Term term)
+    {
+        if (term.IsAccurate)
+        {
+            return ReviewDecision.Accurate;
+        }
+
+        return term.IsReviewed ? ReviewDecision.Denied : ReviewDecision.Pending;
     }
 
     private static string ResolveSourcePath(string baseDirectory, string path)

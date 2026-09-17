@@ -29,72 +29,63 @@
           "found": "golf",
           "word": "golfer",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "gol",
           "word": "golfer",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golfer",
           "word": "golfer",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "tennis",
           "found": "tennis",
           "word": "tennis",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "go-l*fe-r_andmore",
           "word": "go-l*fe-r_andmore",
           "line": 5,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golfer",
           "word": "golfer",
           "line": 6,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "baseball",
           "found": "baseball",
           "word": "baseball",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golf",
           "word": "golf",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "gol",
           "word": "golf",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         }
       ]
     },
@@ -107,64 +98,56 @@
           "found": "football",
           "word": "football",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "football",
           "found": "foot-ball",
           "word": "foot-ball",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "basketball",
           "found": "basketball",
           "word": "basketball",
           "line": 5,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "basketball",
           "found": "basket_ball",
           "word": "basket_ball",
           "line": 6,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golf",
           "word": "golfer",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "gol",
           "word": "golfer",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golfer",
           "word": "golfer",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "tennis",
           "found": "tennis",
           "word": "tennis",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         }
       ]
     },
@@ -177,72 +160,63 @@
           "found": "hockey",
           "word": "hockey",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "hockey",
           "found": "h0ckey",
           "word": "h0ckey",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "hockey",
           "found": "h0ckey",
           "word": "h0ckey",
           "line": 5,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "baseball",
           "found": "base-ball",
           "word": "base-ball",
           "line": 6,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "baseball",
           "found": "base-ball",
           "word": "base-ball",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golf",
           "word": "golfer",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "gol",
           "word": "golfer",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golfer",
           "word": "golfer",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "football",
           "found": "football",
           "word": "football",
           "line": 9,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         }
       ]
     },
@@ -255,80 +229,70 @@
           "found": "go-l*fe-r_andmore",
           "word": "go-l*fe-r_andmore",
           "line": 3,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golf",
           "word": "golfer",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "gol",
           "word": "golfer",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "golf",
           "found": "golfer",
           "word": "golfer",
           "line": 4,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "tennis",
           "found": "atennistal",
           "word": "atennistal",
           "line": 5,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "tennis",
           "found": "atennistal",
           "word": "atennistal",
           "line": 6,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "basketball",
           "found": "basket_ball",
           "word": "basket_ball",
           "line": 7,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "basketball",
           "found": "basketball",
           "word": "basketball",
           "line": 8,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "hockey",
           "found": "h0ckey",
           "word": "h0ckey",
           "line": 9,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         },
         {
           "sport": "football",
           "found": "foot-ball",
           "word": "foot-ball",
           "line": 10,
-          "isAccurate": false,
-          "isReviewed": true
+          "isAccurate": false
         }
       ]
     }
