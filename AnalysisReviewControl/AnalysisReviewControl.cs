@@ -40,6 +40,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private readonly ThemedDropDown _cboFile = new();
     private readonly ThemedDropDown _cboStatus = new();
     private readonly Button _btnImport = new();
+    private readonly Button _btnExport = new();
     private readonly Button _btnConfirm = new();
     private readonly Button _btnDeny = new();
     private readonly Button _btnUndo = new();
@@ -58,6 +59,10 @@ public partial class AnalysisReviewControl : ReviewUserControl
     private string _searchText = string.Empty;
 
     public event EventHandler? ImportClicked;
+
+    public event EventHandler? ExportClicked;
+
+    public IReadOnlyList<AnalysisTableRow> Rows => _rows;
 
     public AnalysisReviewControl()
     {
@@ -118,14 +123,16 @@ public partial class AnalysisReviewControl : ReviewUserControl
         _cboFile.SelectedIndex = 0;
 
         StyleActionButton(_btnImport, "Import JSON", DarkMode.Primary, DarkMode.Background, 128);
+        StyleActionButton(_btnExport, "Export JSON", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 120);
         StyleActionButton(_btnConfirm, "Confirm  Y", DarkMode.Success, DarkMode.Background, 118);
         StyleActionButton(_btnDeny, "Deny  N", BlendErrorButton(), DarkMode.Error, 104);
         StyleActionButton(_btnUndo, "Undo  Z", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 92);
         StyleActionButton(_btnNext, "Next  F3", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 100);
         StyleActionButton(_btnCollapse, "Collapse all", DarkMode.ElevatedSurface, DarkMode.TextPrimary, 118);
         UpdateUndoButton();
+        UpdateExportButton();
 
-        flow.Controls.Add(Wrap(CreateCaption("Source"), _btnImport));
+        flow.Controls.Add(Wrap(CreateCaption("Source"), CreateSourceRow()));
         flow.Controls.Add(Wrap(CreateCaption("Search"), new ModernFieldHost(_txtSearch, 268, searchIcon: true)));
         flow.Controls.Add(Wrap(CreateCaption("Sport"), _cboSport));
         flow.Controls.Add(Wrap(CreateCaption("File"), _cboFile));
@@ -165,6 +172,25 @@ public partial class AnalysisReviewControl : ReviewUserControl
             OutlineKind.File => ReviewRowBand.File,
             _ => ReviewRowBand.Match
         };
+    }
+
+    private Control CreateSourceRow()
+    {
+        var panel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Width = 256,
+            Height = 36,
+            BackColor = DarkMode.Surface,
+            Margin = Padding.Empty
+        };
+
+        _btnImport.Margin = Padding.Empty;
+        _btnExport.Margin = new Padding(8, 0, 0, 0);
+        panel.Controls.Add(_btnImport);
+        panel.Controls.Add(_btnExport);
+        return panel;
     }
 
     private Control CreateButtonRow()
@@ -346,6 +372,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         };
 
         _btnImport.Click += (_, _) => ImportClicked?.Invoke(this, EventArgs.Empty);
+        _btnExport.Click += (_, _) => ExportClicked?.Invoke(this, EventArgs.Empty);
         _btnConfirm.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Accurate, advance: true);
         _btnDeny.Click += (_, _) => ReviewSelected(decision: ReviewDecision.Denied, advance: true);
         _btnUndo.Click += (_, _) => UndoLast();
@@ -403,6 +430,7 @@ public partial class AnalysisReviewControl : ReviewUserControl
         RebuildFileFilter();
         ApplyFilterAndRebuild(keepCurrent: false);
         UpdateUndoButton();
+        UpdateExportButton();
 
         if (_visible.Count > 0)
         {
@@ -979,6 +1007,11 @@ public partial class AnalysisReviewControl : ReviewUserControl
             : termList;
     }
 
+    private bool IsGroupedHit(OutlineRow outline)
+    {
+        return outline.Kind == OutlineKind.Match && GetClones(outline.RowIndex).Length > 1;
+    }
+
     private (int total, int accurate, int denied) GetCounts(OutlineRow outline)
     {
         if (outline.Kind == OutlineKind.Sport)
@@ -1036,7 +1069,9 @@ public partial class AnalysisReviewControl : ReviewUserControl
                 OutlineKind.File => _fileFont,
                 _ => Font
             };
-            e.CellStyle.ForeColor = DarkMode.TextPrimary;
+            e.CellStyle.ForeColor = outline.Kind is OutlineKind.Sport or OutlineKind.File
+                ? DarkMode.Primary
+                : DarkMode.TextPrimary;
             e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
         }
         else if (column == ColState)
@@ -1057,6 +1092,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
             e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             e.CellStyle.ForeColor = DarkMode.TextSecondary;
             e.CellStyle.SelectionForeColor = DarkMode.TextSecondary;
+        }
+        else if (column == ColSummary)
+        {
+            e.CellStyle.ForeColor = IsGroupedHit(outline)
+                ? DarkMode.Secondary
+                : DarkMode.TextSecondary;
+            e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
         }
         else
         {
@@ -1673,6 +1715,13 @@ public partial class AnalysisReviewControl : ReviewUserControl
         bool enabled = _undoStack.Count > 0;
         _btnUndo.Enabled = enabled;
         _btnUndo.ForeColor = enabled ? DarkMode.TextPrimary : DarkMode.TextDisabled;
+    }
+
+    private void UpdateExportButton()
+    {
+        bool enabled = _rows.Length > 0;
+        _btnExport.Enabled = enabled;
+        _btnExport.ForeColor = enabled ? DarkMode.TextPrimary : DarkMode.TextDisabled;
     }
 
     private void ReviewAllFiltered(ReviewDecision decision)

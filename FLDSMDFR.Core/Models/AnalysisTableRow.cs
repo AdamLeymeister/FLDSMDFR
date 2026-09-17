@@ -10,7 +10,13 @@ public class AnalysisTableRow
 
     public string File { get; set; } = string.Empty;
 
+    public string OriginalFile { get; set; } = string.Empty;
+
     public int LineNumber { get; set; }
+
+    public int ImportOrder { get; set; }
+
+    public bool OriginalIsAccurate { get; set; }
 
     public ReviewDecision Decision { get; set; } = ReviewDecision.Pending;
 
